@@ -50,7 +50,7 @@
   "author": "Miguel Ping <miguel.ping@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^8.2.5",
+    "electron": "^8.5.2",
     "electron-builder": "^22.6.0",
     "shadow-cljs": "^2.8.89",
     "source-map-support": "^0.4.18"
