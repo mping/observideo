@@ -69,7 +69,7 @@
     "ffmpeg-static-electron": "^2.0.1",
     "ffprobe-static-electron": "^2.0.0",
     "fluent-ffmpeg": "^2.1.2",
-    "highlight.js": "9.15.10",
+    "highlight.js": "10.4.1",
     "jszip": "^3.5.0",
     "md5-file": "^5.0.0",
     "normalize-path": "^3.0.0",
