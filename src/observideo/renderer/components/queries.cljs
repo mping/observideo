@@ -29,21 +29,22 @@
    [:hr]
    (render-result-row bottom)])
 
-(defn- export-current-query [ query-result]
+(defn- export-current-query [query-result]
   (rf/dispatch [:query/export query-result]))
 
 (defn ui
   []
-  (let [templates-map     @(rf/subscribe [:templates/all])
-        templates         (vals templates-map)
+  (let [templates-map       @(rf/subscribe [:templates/all])
+        templates           (vals templates-map)
 
         ;; local state
-        current-template! (r/atom nil)
-        top-selection!    (r/atom {})
-        bottom-selection! (r/atom {})
-        make-selection    (fn [t]
-                            (let [attributes (:attributes t)]
-                              (reduce (fn [acc k] (assoc acc k nil)) {} (keys attributes))))]
+        current-template!   (r/atom nil)
+        current-aggregator! (r/atom :identity)
+        top-selection!      (r/atom {})
+        bottom-selection!   (r/atom {})
+        make-selection      (fn [t]
+                              (let [attributes (:attributes t)]
+                                (reduce (fn [acc k] (assoc acc k nil)) {} (keys attributes))))]
 
     ;; reset screen
     (rf/dispatch [:query/reset])
@@ -53,29 +54,44 @@
       (let [query-result    @(rf/subscribe [:query/result])
             current-query   @(rf/subscribe [:query/current])
             attributes      (:attributes @current-template!)
-            aggregation     "some_video_prefix_aggregator"
+            update-fn       (fn []
+                              (rf/dispatch [:query/update (:id @current-template!) @current-aggregator! @top-selection! @bottom-selection!]))
             dispatch-update (fn [r k v]
                               (let [proper-value (if (= v indifferent) nil v)]
                                 (swap! r assoc k proper-value)
-                                (rf/dispatch [:query/update (:id @current-template!) aggregation @top-selection! @bottom-selection!])))]
+                                (update-fn)))]
 
         [:div
          [:h1 "Queries"]
-         ;; select a component
-         [antd/select {:onChange #(do (reset! current-template! (get templates-map %))
-                                      (reset! top-selection! (make-selection @current-template!))
-                                      (reset! bottom-selection! (make-selection @current-template!))
-                                      (rf/dispatch [:query/update (:id @current-template!) aggregation @top-selection! @bottom-selection!]))}
-          (for [tmpl templates
-                :let [{:keys [id name]} tmpl]]
-            [antd/option {:key id} name])]
 
-         [:p "Select a template"]
-         [antd/button {:size    "small"
-                       :href    "#"
-                       :disabled (nil? @current-template!)
-                       :onClick #(export-current-query query-result)}
-          [antd/download-icon] " export"]
+         [antd/form {:layout     "inline"
+                     :name       "basic"
+                     :size       "small"
+                     :ref        "form"}
+          ;; main name
+          [antd/form-item {:label "Template"}
+           [antd/select {:placeholder "Select a template"
+                         :onChange    #(do (reset! current-template! (get templates-map %))
+                                           (reset! top-selection! (make-selection @current-template!))
+                                           (reset! bottom-selection! (make-selection @current-template!))
+                                           (update-fn))}
+            (for [tmpl templates
+                  :let [{:keys [id name]} tmpl]]
+              [antd/option {:key id} name])]]
+
+          [antd/form-item {:label "Aggregation"}
+           [antd/select {:placeholder "Combine videos?"
+                         :disabled    (nil? @current-template!)
+                         :onChange    #(do (reset! current-aggregator! (keyword %))
+                                           (update-fn))}
+            [antd/option {:key :identity} "Combine videos: no"]
+            [antd/option {:key :by-prefix} "Combine by name"]]]
+
+          [antd/form-item
+           [antd/button {:href     "#"
+                         :disabled (nil? @current-template!)
+                         :onClick  #(export-current-query query-result)}
+            [antd/download-icon] " export"]]]
 
          [:hr]
 

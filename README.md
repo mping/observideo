@@ -36,3 +36,11 @@ then you can build (requires java) and dist:
 yarn build
 yarn dist -wl
 ```
+
+## REPL
+
+```
+(:require
+ '[shadow.cljs.devtools.api :as shadow])
+(shadow/repl :renderer)
+```

@@ -3,7 +3,8 @@
    [clojure.set :as set]
    [re-frame.core :as rf :refer [reg-sub subscribe]]
    [reagent.ratom :as r :refer-macros [reaction]]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [observideo.common.utils :as utils]))
 
 ;;;;
 ;; UI
@@ -29,10 +30,10 @@
       (get-in @db [:videos/current :current-section]))))
 
 (rf/reg-sub-raw :videos/current-template
-                (fn [db _]
-                  (reaction
-                   (let [template-id (get-in @db [:videos/current :template-id])]
-                     (get-in @db [:templates/all template-id])))))
+  (fn [db _]
+    (reaction
+      (let [template-id (get-in @db [:videos/current :template-id])]
+        (get-in @db [:templates/all template-id])))))
 
 (rf/reg-sub-raw :videos/current-observation
   (fn [db _]
@@ -46,7 +47,7 @@
     (reaction
       (let [aggr (map :template-id (vals (get @db :videos/all)))
             cnt  (frequencies aggr)]
-         cnt))))
+        cnt))))
 
 (rf/reg-sub :templates/all
   (fn [db _] (:templates/all db)))
@@ -76,23 +77,41 @@
       ;; maps are converted to #{[k v] .. [k v]} so the can match based on element equality
       ;; [k1 v1] == [k2 v2]
       (set/subset? (set query)
-                   (set observations)))))
+        (set observations)))))
 
 (comment
   (matches? {"Peer" "Alone" "Gender" "Male"} {"Peer" "Alone" "Gender" nil})) ;;true
 
-(defn- run-query
+(defn- agg->normalize-fn [all-filenames agg-type]
+  "Returns a map indexed by type of aggregation.
+  Aggregation is used to normalize similar filenames into something that can be grouped."
+  (get {:identity  identity
+        :by-prefix (fn [n]
+                     (utils/fname n))}
+                     
+    agg-type
+    ;; fallback
+    identity))
+
+(defn- run-query2
   "Returns a vector [query {video num-of-observations}]
    Example: [ (\"Alone, Group\") {\"SampleVideo.mpg\" 5 \"OtherVideo.mpg\" 1}]
 "
   [videos aggregator query]
-  (->> videos
-       (map (fn [{:keys [filename observations]}]
-              ;; [filename matches total]
-              [filename (count (filter #(matches? % query) observations)) (count observations)]))
-       (filter (fn [[v c t]] (> c 0)))
-       (reduce (fn [m [v c t]] (assoc m v [c t]))
-               {})))
+  (let [all-filenames (map :filename videos)
+        normalize-fn  (agg->normalize-fn all-filenames aggregator)]
+    (->> videos
+      (map (fn [{:keys [filename observations]}]
+             [(normalize-fn filename)
+              (count (filter #(matches? % query) observations))
+              (count observations)]))
+      ;; filter only positives
+      (filter (fn [[filename matches total]] (> matches 0)))
+      ;; aggregate {filename [matches total]}
+      (reduce (fn [m [filename matches total]]
+                (println ">>>>>>>>" filename)
+                (update m filename (fn [[m t]] [(+ (or m 0) matches) (+ (or t 0) total)])))
+        {}))))
 
 (comment
   (let [db     @re-frame.db/app-db
@@ -102,7 +121,11 @@
         videos (filter #(not (:missing? %)) videos)]
     (def *v videos)
     (def *q top)
-    (run-query videos aggregator bottom)))
+    ;(run-query videos aggregator bottom)
+    (run-query2 videos :by-prefix top))
+  "")
+
+
 
 (rf/reg-sub :query/result
   (fn [db _]
@@ -110,5 +133,5 @@
           videos (:videos/all db)
           videos (filter #(= template-id (:template-id %)) (vals videos))
           videos (filter #(not (:missing? %)) videos)]
-      {:top    [(vals top)    (run-query videos aggregator top)]
-       :bottom [(vals bottom) (run-query videos aggregator bottom)]})))
+      {:top    [(vals top) (run-query2 videos aggregator top)]
+       :bottom [(vals bottom) (run-query2 videos aggregator bottom)]})))

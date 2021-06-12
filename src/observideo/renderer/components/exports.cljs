@@ -24,13 +24,27 @@
        [antd/button {:type "primary" :onClick #(start-export {:by :index1})}
         [antd/download-icon]
         " Export to CSV (index starts at 1)"]
-       [:p "Export the data as zip, with one CSV file per video. Indexed based."]
-       [:p "Each csv file will have the data with the following format"]
-       [:pre"Peer,Gender
-1,1
-1,2
- ,2
-etc"]]]
+       [:p "Export the data as zip, with one CSV file per video. Index based."]
+       [:p "For a template with the given data:"]
+       [:table {:style {:width "100%"}}
+        [:thead.ant-table-thead
+         [:tr
+          [:td [:b "Peer"]]
+          [:td [:b "Gender"]]]]
+        [:tbody.ant-table-tbody
+         [:tr
+          [:td "Alone" [:b " 1"]]
+          [:td "Same" [:b " 1"]]]
+         [:tr
+          [:td "Adults" [:b " 2"]]
+          [:td "Both" [:b " 2"]]]]]
+       [:hr]
+       [:p "Each csv file will have the data with the following format:"]
+       [:pre"Peer, Gender
+1,    1
+2,    1
+ ,    2
+..."]]]
 
      [antd/col {:span 12} 
       [:div
@@ -38,9 +52,24 @@ etc"]]]
         [antd/download-icon]
         " Export to CSV (name)"]
        [:p "Export the data as CSV, name based."]
-       [:p "Each csv file will have the data with the following format"]
-       [:pre "Peer,Gender
-Alone,Same
-Adults,Both
-etc"]]]]]])
+       [:p "For a template with the given data:"]
+       [:table {:style {:width "100%"}}
+        [:thead.ant-table-thead
+         [:tr
+          [:td [:b "Peer"]]
+          [:td [:b "Gender"]]]]
+        [:tbody.ant-table-tbody
+         [:tr
+          [:td "Alone"]
+          [:td "Same"]]
+         [:tr
+          [:td "Adults"]
+          [:td "Both"]]]]
+       [:hr]
+       [:p "Each csv file will have the data with the following format:"]
+       [:pre "Peer,  Gender
+Alone,  Same
+Adults, Both
+      , Both
+..."]]]]]])
 

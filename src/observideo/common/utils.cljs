@@ -1,10 +1,11 @@
 (ns observideo.common.utils
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            ["path" :as path]))
+
+(def separator (.-sep path))
 
 (defn fname [path]
-  ;;TODO use os.separator
-  (subs path (inc (s/last-index-of path "/"))))
-
+  (subs path (inc (s/last-index-of path separator))))
 
 (defn relname [basedir path]
   (subs path (inc (count basedir))))

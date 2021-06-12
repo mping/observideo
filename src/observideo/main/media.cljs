@@ -1,5 +1,5 @@
 (ns observideo.main.media
-  (:require 
+  (:require
    [clojure.walk :as walk]
    [taoensso.timbre :as log]
    ["path" :as path]
@@ -21,25 +21,25 @@
 ;; https://github.com/joshwnj/ffprobe-static/issues/5
 
 (if (not (.includes (js* "__dirname") ".asar"))
-		  (do
-					
-					(log/debug "Using default ffprobe/ffmpeg paths:")
-					;; UNUSED (log/debug "ffmpeg:"  ffmpeg-path)
-					(log/debug "ffprobe:" ffprobe-path)
-		  	;; UNUSED (.setFfmpegPath  ffmpeg-command ffmpeg-path)
-		  	(.setFfprobePath ffmpeg-command ffprobe-path))
+  (do
 
-		  (let [ext     (if (= (.-platform js/process) "win32") ".exe" "")
-		        ffppath (.join path (str (.-resourcesPath js/process) "/ffprobe" ext))
-		        ;; UNUSED ffmpath (.join path (str (.-resourcesPath js/process) "/ffmpeg"  ext))
-		        ]
-			
-			   (log/debug "Using resources path:")
-						;; UNUSED (log/debug "ffmpeg:"  ffmpath)
-						(log/debug "ffprobe:" ffppath)
+    (log/debug "Using default ffprobe/ffmpeg paths:")
+    ;; UNUSED (log/debug "ffmpeg:"  ffmpeg-path)
+    (log/debug "ffprobe:" ffprobe-path)
+    ;; UNUSED (.setFfmpegPath  ffmpeg-command ffmpeg-path)
+    (.setFfprobePath ffmpeg-command ffprobe-path))
 
-	     ;; UNUSED (.setFfmpegPath ffmpeg-command  (normalize-path ffmpath))
-		  	 (.setFfprobePath ffmpeg-command (normalize-path ffppath))))
+  (let [ext     (if (= (.-platform js/process) "win32") ".exe" "")
+        ffppath (.join path (str (.-resourcesPath js/process) "/ffprobe" ext))]
+        ;; UNUSED ffmpath (.join path (str (.-resourcesPath js/process) "/ffmpeg"  ext))
+        
+
+    (log/debug "Using resources path:")
+    ;; UNUSED (log/debug "ffmpeg:"  ffmpath)
+    (log/debug "ffprobe:" ffppath)
+
+    ;; UNUSED (.setFfmpegPath ffmpeg-command  (normalize-path ffmpath))
+    (.setFfprobePath ffmpeg-command (normalize-path ffppath))))
 
 
 
@@ -48,7 +48,7 @@
 
 (defn db-info [video]
   (merge video {"missing" false
-                "info" {:a "changeme"}}))
+                "info"    {:a "changeme"}}))
 
 (defn filter-keys [video]
   (-> video
@@ -56,13 +56,13 @@
     (walk/keywordize-keys)))
 
 (defn read-metadata [path]
-  (js/Promise. 
-   (fn [resolve reject]
-     (.ffprobe 
-      ffmpeg-command
-      path 
-      (fn [err metadata]
-        (if err (reject err) (resolve (aget metadata "format"))))))))
+  (js/Promise.
+    (fn [resolve reject]
+      (.ffprobe
+        ffmpeg-command
+        path
+        (fn [err metadata]
+          (if err (reject err) (resolve (aget metadata "format"))))))))
 
 (defn read-dir [dir]
   ;; TODO check if directory exists
@@ -72,13 +72,13 @@
         result     (fast-glob (clj->js normalized) #js {:caseSensitiveMatch false})]
     (log/debug "Reading directory with patterns" normalized)
     (-> result
-        (.then #(do (log/infof "Read files %s" %) %))
-        (.then #(js/Promise.all (map read-metadata %)))
-        (.then #(js->clj %))
-        (.then #(map checksum %))
-        (.then #(map db-info %))
-        (.then #(map filter-keys %))
-        (.then #(sort-by :filename %)))))
+      (.then #(do (log/infof "Read files %s" %) %))
+      (.then #(js/Promise.all (map read-metadata %)))
+      (.then #(js->clj %))
+      (.then #(map checksum %))
+      (.then #(map db-info %))
+      (.then #(map filter-keys %))
+      (.then #(sort-by :filename %)))))
 
 ;(.ffprobe ffmpeg-command "/Users/guidaveiga/Documents/Pictures/VID_20150606_172227117.mp4"
 ;  (fn [err metadata] (js/console.log err metadata)))
