@@ -88,7 +88,7 @@
   (get {:identity  identity
         :by-prefix (fn [n]
                      (-> (utils/fname n)
-                         (subs 0 7)))}
+                         (subs 0 8)))}
 
     agg-type
     ;; fallback
