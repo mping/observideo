@@ -44,3 +44,9 @@ yarn dist -wl
  '[shadow.cljs.devtools.api :as shadow])
 (shadow/repl :renderer)
 ```
+
+## Release via GH actions
+```
+git tag 0.0.xx
+git p --tags 
+```

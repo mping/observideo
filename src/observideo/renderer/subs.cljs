@@ -87,8 +87,9 @@
   Aggregation is used to normalize similar filenames into something that can be grouped."
   (get {:identity  identity
         :by-prefix (fn [n]
-                     (utils/fname n))}
-                     
+                     (-> (utils/fname n)
+                         (subs 0 7)))}
+
     agg-type
     ;; fallback
     identity))
