@@ -110,6 +110,6 @@
     "react-highlight.js": "^1.0.7",
     "regenerator-runtime": "^0.13.5",
     "video-react": "^0.14.1",
-    "ws": "^3.2.0"
+    "ws": "^5.2.3"
   }
 }
