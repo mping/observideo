@@ -27,7 +27,8 @@
                            :modules          {:renderer {:entries [observideo.renderer.core]}}
 
                            :compiler-options {:closure-warnings {:global-this :off}
-                                              :closure-defines  {re-frame.trace.trace-enabled? true}}
+                                              :closure-defines  {re-frame.trace.trace-enabled? true}
+                                              :infer-externs    true}
 
                            :devtools         {:use-document-host false
                                               :before-load       observideo.renderer.core/stop

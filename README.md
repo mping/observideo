@@ -47,6 +47,8 @@ yarn dist -wl
 
 ## Release via GH actions
 ```
-git tag 0.0.xx
+<update package.json>
+git commit -am "v0.1.2"
+git tag v0.1.2
 git p --tags 
 ```
