@@ -1,6 +1,8 @@
 (ns observideo.common.datamodel
   (:require [spec-tools.data-spec :as ds]
             [clojure.spec.alpha :as s]
+            [goog.string :as gstr]
+            [goog.string.format]
             [taoensso.timbre :as log]))
 
 (def demo-template {:id         "fb52dd46-85cc-4864-b11e-44b8a5b28331"
@@ -23,7 +25,7 @@
                  :template-id     "7dd2479d-e829-4762-a0ac-de51a68461b5"})
 
 (def demo-query {:template-id "fb52dd46-85cc-4864-b11e-44b8a5b28331"
-                 :aggregator  :identity ;; OR :by-prefix
+                 :aggregator  :identity                     ;; OR :by-prefix
                  :top         {"Peer" nil "Gender" "Same" "Type" "Exercise"}
                  :bottom      {"Peer" nil "Gender" "Same" "Type" "Exercise"}})
 
@@ -62,6 +64,7 @@
                    (ds/opt :observations)    [observation-spec]
                    (ds/opt :template-id)     string?}}))
 
+
 (def db-spec
   (ds/spec {:name ::db
             :spec {:observideo/filename (s/nilable string?)
@@ -73,33 +76,50 @@
                    :templates/current   (s/nilable template-spec)}}))
 
 (defn empty-db []
-  {:observideo/filename nil
-   :ui/tab              :videos
+  {:observideo/filename   nil
+   :ui/tab                :videos
 
    ;; videos list is a vec because they are in the filesystem
-   :videos/folder       nil                                 ;;string
-   :videos/all          nil                                 ;;map {filename > video}
-   :videos/current      nil                                 ;;video
+   :videos/folder         nil                               ;;string
+   :videos/all            nil                               ;;map {filename > video}
+   :videos/current        nil                               ;;video
 
    ;; templates are keyed by :id because it facilitates CRUD operations
-   :templates/all       {(:id demo-template) demo-template} ;; {uuid -> template}
-   :templates/current   nil
+   :templates/all         {(:id demo-template) demo-template} ;; {uuid -> template}
+   :templates/current     nil
 
    ;;transient data, doesnt need to be persisteed
-   :query/current       nil})                               ;; query
+   :query/current         nil                               ;; query
+   ;; notifs
+   :notifications/current nil})
 
 ;;;;
 ;; Data export facilities
+
+(defn- errors [filename template observation]
+  (->> observation
+    (map-indexed (fn [i [attr val]]
+                   (let [values (get-in template [attr :values] [])
+                         idx    (.indexOf values val)]
+                     (when (and (some? val) (< idx 0))
+                       (let [message (gstr/format "An issue occured with video '%s'" filename)
+                             descr   (gstr/format "Observation number %s: Failed to find index for attribute '%s' with value '%s'"
+                                       (inc i) attr val filename)]
+                         (log/warnf "'%s': Failed to find index for attr '%s' value '%s'" filename attr val)
+                         {:message     message
+                          :description descr})))))
+    (filter identity)
+    (flatten)))
+
+
 (defn- observation->index0
   "Maps observations to 0-based indexes according to template, or -1 if not found"
   [template observation]
   (mapv (fn [[attr val]]
-          (let [values (get-in template [attr :values])
+          (let [values (get-in template [attr :values] [])
                 idx    (.indexOf values val)]
-            (when (and (some? val) (< idx 0))
-              (log/warnf "template %s: Failed to find index for attr %s value %s" template attr val))
-            ;; nil -> nil
-            ;; "xxx" -> index
+            ;; nil      -> nil
+            ;; "xxx"    -> index
             ;; notfound -> -1
             (or (and val idx)
               nil)))
@@ -117,11 +137,14 @@
   "Exports the video data as csv. Exposes a map"
   [{:keys [attributes] :as template}
    {:keys [observations filename] :as video}]
+  (log/infof "Converting video '%s' to csv" filename)
   (let [headers           (keys attributes)
         observation-vals  (mapv #(into [] (vals %)) observations)
+        errors            (mapv #(errors filename attributes %) observations)
         observations-idx0 (mapv #(observation->index0 attributes %) observations)
         observations-idx1 (mapv #(observation->index1 attributes %) observations)]
     {:filename  filename
+     :errors    (filter #(not (empty? %)) errors)
      :by-name   (concat [headers] observation-vals)
      :by-index0 (concat [headers] observations-idx0)
      :by-index1 (concat [headers] observations-idx1)}))
