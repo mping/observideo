@@ -110,7 +110,6 @@
       (filter (fn [[filename matches total]] (> matches 0)))
       ;; aggregate {filename [matches total]}
       (reduce (fn [m [filename matches total]]
-                (println ">>>>>>>>" filename)
                 (update m filename (fn [[m t]] [(+ (or m 0) matches) (+ (or t 0) total)])))
         {}))))
 

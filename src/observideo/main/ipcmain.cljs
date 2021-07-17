@@ -74,17 +74,23 @@
 (declare download)
 
 (defmethod handle :db/export [event sender data]
-  (let [url (db/export-to-csv data)]
-    (-> url
-        (p/then #(download (current-focused-window) % #js {:saveAs true :openFolderWhenDone true}))
-        (p/then #(log/infof "Export done" %)))))
+  (let [export (db/export-to-csv data)]
+    (-> export
+        (p/then (fn [{:keys [file errors]}]
+                  (send-message :main/export-errors errors)
+                  (download (current-focused-window) file #js {:saveAs true :openFolderWhenDone true})))
+      (p/then (fn [f]
+               (log/infof "Export done" f))))))
+
 
 
 (defmethod handle :query/export [event sender data]
   (let [url (db/export-result-to-csv data)]
     (-> url
-      (p/then #(download (current-focused-window) % #js {:saveAs true :openFolderWhenDone true}))
-      (p/then #(log/infof "Export done" %)))))
+      (p/then (fn [{:keys [file errors]}]
+                (download (current-focused-window) file #js {:saveAs true :openFolderWhenDone true})))
+      (p/then (fn [f]
+                (log/infof "Export done" f))))))
 
 
 ;;;;

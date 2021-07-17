@@ -3,7 +3,8 @@
             ["regenerator-runtime/runtime"]
             ["antd" :refer [Layout Menu Breadcrumb Icon Button PageHeader Table Breadcrumb
                             Row Col
-                            Form Select Input Slider Icon Affix]]
+                            Form Select Input Slider Icon Affix
+                            notification]]
             ["@ant-design/icons" :refer [VideoCameraOutlined TagsOutlined BarChartOutlined
                                          UploadOutlined EditOutlined DeleteOutlined SaveOutlined DownloadOutlined
                                          PlusCircleOutlined MinusCircleOutlined MinusOutlined PlusOutlined
@@ -70,6 +71,15 @@
 (def option (reagent/adapt-react-class (aget Select "Option")))
 (def input-group (.-Group Input))
 (def slider (reagent/adapt-react-class Slider))
+
+(def notify-success (aget notification "success"))
+(def notify-info (aget notification "info"))
+(def notify-warning (aget notification "warning"))
+(def notify-error (aget notification "error"))
+
+(comment
+  ;; https://ant.design/components/notification/#API
+  (notify-warning #js {:message "xxx" :description "YYY" :placement "topRight"}))
 
 (def breadcrumb (reagent/adapt-react-class Breadcrumb))
 (def breadcrumb-item (reagent/adapt-react-class (aget Breadcrumb "Item")))

@@ -86,7 +86,8 @@
           ;;;;
           ;; left col - video player
           [antd/col {:span 12}
-           [antd/page-header {:title  (utils/fname filename) :subTitle filename
+           [antd/page-header {:title  (utils/fname filename)
+                              :subTitle filename
                               :onBack #(rf/dispatch [:ui/deselect-video])}]
            [player/video-player {:playsInline true
                                  :src         (str "file://" (:filename video))
@@ -107,7 +108,6 @@
 
           ;;;;
           ;; right col - template application
-
           [antd/col {:span 12}
            [antd/page-header {:title "Template"}]
            [:div
@@ -115,7 +115,7 @@
              (for [tmpl templates
                    :let [{:keys [id name]} tmpl]]
                [antd/option {:key id} name])]
-            [:span (str " interval: " @!step-interval "s")]]
+            [:span (str " interval: " @!step-interval "s, section: " @video-section)]]
            [antd/slider {:min            0
                          :max            num-observations
                          :value          @video-section

@@ -3,7 +3,8 @@
             [re-frame.core :as rf]
             [goog.object :as gobj]
             [taoensso.timbre :as log]
-            [observideo.common.serde :as serde]))
+            [observideo.common.serde :as serde]
+            [observideo.renderer.components.antd :as antd]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; IPC Main <> Renderer
@@ -30,6 +31,14 @@
 
 (defmethod handle :main/reset-db [event sender data]
   (rf/dispatch [:db/reset data]))
+
+(defmethod handle :main/export-errors [event sender data]
+  ;; TODO: notifications are ephemeral
+  ;; but it would be nice to put them in the db
+  ;; and pop them after consuming them in a given UI view
+  (doseq [notif data]
+    (js/console.log (clj->js (assoc notif :placement "topRight")))
+    (antd/notify-warning (clj->js (assoc notif :placement "topRight" :duration 0)))))
 
 (defmethod handle :unknown [event sender data]
   (log/warnf "UNKNOWN EVENT %s" data))

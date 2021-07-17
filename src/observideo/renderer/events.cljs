@@ -206,8 +206,9 @@
     (assoc db :query/current nil)))
 
 
-
 (rf/reg-event-db
   :query/export
   [interceptors/event->ipc]
   (fn [db _] db))
+
+

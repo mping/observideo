@@ -28,7 +28,7 @@
 
                            :compiler-options {:closure-warnings {:global-this :off}
                                               :closure-defines  {re-frame.trace.trace-enabled? true}
-                                              :infer-externs    true}
+                                              :infer-externs    :auto}
 
                            :devtools         {:use-document-host false
                                               :before-load       observideo.renderer.core/stop
