@@ -1,7 +1,7 @@
 {
   "name": "observideo",
   "homepage": "https://observideo.com",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Observideo is an app for categorizing video segments",
   "license": "MIT",
   "main": "resources/main.js",
