@@ -7,13 +7,13 @@
             [observideo.renderer.subs]
             [observideo.renderer.events]
             [observideo.renderer.ipcrenderer :as ipc]
-            [observideo.renderer.ipcrenderer :as ipcrenderer]))
+            [observideo.renderer.ipcrenderer :as ipcrenderer]
+            ["electron" :as electron :refer [ipcRenderer]]))
 
 
-(devtools/install!)       ;; we love https://github.com/binaryage/cljs-devtools
+;; (devtools/install!)       ;; we love https://github.com/binaryage/cljs-devtools
 (enable-console-print!)
 
-(defonce electron (js/require "electron"))
 (def ipcRenderer (gobj/get electron "ipcRenderer"))
 (def dom-root (js/document.getElementById "app"))
 ;; -- Entry Point -------------------------------------------------------------
@@ -27,6 +27,7 @@
   (.on ipcRenderer "event" ipc/handle-message))
 
 (defn ^:dev/after-load start []
+  (println "START!")
   (reagent/render [observideo.renderer.views/ui] dom-root))
 
 (init)

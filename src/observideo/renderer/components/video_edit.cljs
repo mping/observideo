@@ -7,10 +7,8 @@
             [observideo.common.utils :as utils]
             [observideo.renderer.ipcrenderer :as ipcrenderer]
             [observideo.renderer.components.antd :as antd]
-            [observideo.renderer.components.player :as player]))
-
-
-(defonce electron (js/require "electron"))
+            [observideo.renderer.components.player :as player]
+            ["electron" :as electron]))
 
 (defn- select-template [video id]
   (rf/dispatch [:ui/update-current-video-template (str id)]))

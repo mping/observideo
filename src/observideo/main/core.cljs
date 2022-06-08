@@ -5,7 +5,6 @@
    ["electron" :as electron :refer [ipcMain app BrowserWindow crashReporter]]
    ["electron-dl" :as electron-dl]))
 
-(def electron (js/require "electron"))
 (def app  (.-app electron))
 (def menu (.-Menu electron))
 (def browser-window (.-BrowserWindow electron))
@@ -74,6 +73,7 @@
                                          :height         600
                                          :icon           (str js/__dirname "/public/img/computer.png")
                                          :webPreferences {:nodeIntegration true
+                                                          :contextIsolation false
                                                           :devTools true}
                                          :resizable      true}))))
 

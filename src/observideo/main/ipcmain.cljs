@@ -11,7 +11,6 @@
 ;;;;
 ;; utils
 ;; https://github.com/brianium/tomaat/blob/master/src/tomaat/util.cljs
-(def electron (js/require "electron"))
 (def app (.-app electron))
 
 (defn- browser-window-ctor []

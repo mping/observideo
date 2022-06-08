@@ -24,12 +24,12 @@
                            :output-dir       "resources/public/js"
                            :asset-path       "js"
 
-                           :js-options       {:js-provider :shadow
-                                              :keep-native-requires true
-                                              :keep-as-require #{"path"}}
+                           :js-options       {:js-provider :require}
 
-                           :modules          {:renderer {:entries [observideo.renderer.core]}}
+                           :modules          {:renderer {#_#_:init-fn observideo.renderer.core/start ;observideo.renderer.core2/start! ;
+                                                         :entries [observideo.renderer.core]}}
 
+                           #_#_#_#_
                            :compiler-options {:closure-warnings {:global-this :off}
                                               :closure-defines  {re-frame.trace.trace-enabled? true}
                                               :infer-externs    :auto}

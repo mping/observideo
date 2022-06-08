@@ -14,7 +14,6 @@
    ["normalize-path" :as normalize-path]
    [clojure.string :as str]))
 
-(def electron (js/require "electron"))
 (def app (.-app electron))
 (def browser-window (.-BrowserWindow electron))
 (def is-development? (boolean (or (.-defaultApp js/process)

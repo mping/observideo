@@ -22,7 +22,7 @@
 
      [antd/sider {:collapsible false :collapsed true :theme "light"}
       [:div.logo
-       [antd/menu {:mode "inline" :theme "light" :defaultSelectedKeys [(name active)]}
+       [antd/menu {:mode "inline" :theme "light" :defaultSelectedKeys [(name (or active :videos))]}
         [antd/menuitem {:key "videos" :onClick #(rf/dispatch [:ui/change-active-tab :videos])}
          [antd/videos-icon]
          [:span "Videos"]]
