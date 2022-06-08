@@ -20,6 +20,7 @@
   (let [template     @(rf/subscribe [:videos/current-template])
         observation  @(rf/subscribe [:videos/current-observation])
         video        @(rf/subscribe [:videos/current])
+        section0?    false ;; (= 0 (get-in video [:current-section :index]))
         attributes   (:attributes template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div.ant-table.ant-table-middle
@@ -53,14 +54,17 @@
 
                  [:tr {:key rowkey}
                   [:td {:key     tdkey
-                        :style   {:background (when attribute-on? "#1890ff")}
+                        :style   {:color      (when section0? "#eee")
+                                  :background (cond
+                                                section0? "#fff"
+                                                attribute-on? "#1890ff")}
                         :onClick #(do
-                                    ;(println  "XXXX" video)
-                                    (if attribute-on?
-                                      (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                    (dissoc observation header)])
-                                      (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                    (assoc observation header attribute)])))}
+                                    (when-not section0?
+                                      (if attribute-on?
+                                        (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                      (dissoc observation header)])
+                                        (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                      (assoc observation header attribute)]))))}
                    attribute]])]]])]]]]]]))
 
 (defn root []
