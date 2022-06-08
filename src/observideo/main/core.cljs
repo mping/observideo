@@ -49,6 +49,7 @@
                                         :accelerator (if darwin? "Alt+Command+I" "Ctrl+Shift+I")
                                         :click       (fn [_ focusedWindow]
                                                        (when focusedWindow
+                                                         ;(.setDevToolsWebContents (. focusedWindow -webContents))
                                                          (.toggleDevTools focusedWindow)))}]}])
                          [{:label   "Window"
                            :role    "window"
