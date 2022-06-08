@@ -24,6 +24,10 @@
                            :output-dir       "resources/public/js"
                            :asset-path       "js"
 
+                           :js-options       {:js-provider :shadow
+                                              :keep-native-requires true
+                                              :keep-as-require #{"path"}}
+
                            :modules          {:renderer {:entries [observideo.renderer.core]}}
 
                            :compiler-options {:closure-warnings {:global-this :off}

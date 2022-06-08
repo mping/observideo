@@ -2688,17 +2688,17 @@ shadow-cljs-jar@1.3.2:
   resolved "https://registry.yarnpkg.com/shadow-cljs-jar/-/shadow-cljs-jar-1.3.2.tgz#97273afe1747b6a2311917c1c88d9e243c81957b"
   integrity sha512-XmeffAZHv8z7451kzeq9oKh8fh278Ak+UIOGGrapyqrFBB773xN8vMQ3O7J7TYLnb9BUwcqadKkmgaq7q6fhZg==
 
-shadow-cljs@^2.11.13:
-  version "2.11.13"
-  resolved "https://registry.yarnpkg.com/shadow-cljs/-/shadow-cljs-2.11.13.tgz#ac229923bd2cb7f69e816ecd856b2250d4acfff3"
-  integrity sha512-igdiPxa9zx5sp66O/zD3SygL2SNobZUKjF74x+eVDfmRue4dudtqtAthMZwnB82SFx1Xh9LpmQGDK+45RvFhZQ==
+shadow-cljs@^2.19.2:
+  version "2.19.2"
+  resolved "https://registry.yarnpkg.com/shadow-cljs/-/shadow-cljs-2.19.2.tgz#ac6d9f03b579aa24cac3e044b1f54625e3a37c78"
+  integrity sha512-5JFger305+x6QKIuzab8FAaRLav7NaOszo6E60oFuQiI2+Q6nhy4UioPSCIeUqWOC1I8jIyhZ9U1nVa7czMAuQ==
   dependencies:
     node-libs-browser "^2.2.1"
     readline-sync "^1.4.7"
     shadow-cljs-jar "1.3.2"
     source-map-support "^0.4.15"
     which "^1.3.1"
-    ws "^3.0.0"
+    ws "^7.4.6"
 
 shallowequal@^1.1.0:
   version "1.1.0"
@@ -3141,7 +3141,7 @@ write-file-atomic@^3.0.0:
     signal-exit "^3.0.2"
     typedarray-to-buffer "^3.1.5"
 
-ws@^3.0.0, ws@^3.2.0:
+ws@^3.2.0:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/ws/-/ws-3.3.3.tgz#f1cf84fe2d5e901ebce94efaece785f187a228f2"
   integrity sha512-nnWLa/NwZSt4KQJu51MYlCcSQ5g7INpOrOMt4XV8j4dqTXdmlUmSHQ8/oLC069ckre0fRsgfvsKwbTdtKLCDkA==
@@ -3149,6 +3149,11 @@ ws@^3.0.0, ws@^3.2.0:
     async-limiter "~1.0.0"
     safe-buffer "~5.1.0"
     ultron "~1.1.0"
+
+ws@^7.4.6:
+  version "7.5.8"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-7.5.8.tgz#ac2729881ab9e7cbaf8787fe3469a48c5c7f636a"
+  integrity sha512-ri1Id1WinAX5Jqn9HejiGb8crfRio0Qgu8+MtL36rlTA6RLsMdWt1Az/19A2Qij6uSHUMphEFaTKa4WG+UNHNw==
 
 xdg-basedir@^4.0.0:
   version "4.0.0"

@@ -19,6 +19,7 @@
 (defn- observation-table []
   (let [template     @(rf/subscribe [:videos/current-template])
         observation  @(rf/subscribe [:videos/current-observation])
+        video        @(rf/subscribe [:videos/current])
         attributes   (:attributes template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div.ant-table.ant-table-middle
@@ -54,6 +55,7 @@
                   [:td {:key     tdkey
                         :style   {:background (when attribute-on? "#1890ff")}
                         :onClick #(do
+                                    ;(println  "XXXX" video)
                                     (if attribute-on?
                                       (rf/dispatch [:ui/update-current-video-current-section-observation
                                                     (dissoc observation header)])

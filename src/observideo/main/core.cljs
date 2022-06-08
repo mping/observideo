@@ -19,6 +19,8 @@
 (defonce main-window (atom nil))
 (defonce contents (atom nil))
 
+(set! *warn-on-infer* false)
+
 ;;;;
 ;; menu
 
