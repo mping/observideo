@@ -178,7 +178,7 @@
                                 [topmatch toptot] topres
                                 [btmmatch btmtot] btmres
                                 abstot (max toptot btmtot)]]
-                      (into [] (concat [(utils/fname vname)] [topmatch btmmatch abstot])))
+                      (into [] (concat [(identity #_utils/fname vname)] [topmatch btmmatch abstot])))
         export      (into []
                       (concat [topquery
                                btmquery
