@@ -107,16 +107,22 @@
                                  :ref         (fn [^js/Player el]
                                                 (when (some? el)
                                                   (.subscribeToStateChange el
-                                                                           (fn [jsobj]
-                                                                             (let [secs      (.-currentTime jsobj)
-                                                                                   previndex @video-section
-                                                                                   index     (int (/ secs @!step-interval))]
-                                                                               (reset! video-time secs)
-                                                                               (reset! video-section index)
-                                                                               (rf/dispatch [:ui/update-current-video-section secs index])
-                                                                               ;; auto-pause when the section changes
-                                                                               (when (not= previndex index)
-                                                                                 (.pause el)))))
+                                                    (fn [jsobj]
+                                                      (let [secs      (.-currentTime jsobj)
+                                                            previndex @video-section
+                                                            index     (if (= secs duration)
+                                                                        ;; last index?
+                                                                        (int (+ (int (/ secs @!step-interval))
+                                                                               (if (= 0 (rem duration @!step-interval))
+                                                                                 0
+                                                                                 1)))
+                                                                        (int (/ secs @!step-interval)))]
+                                                        (reset! video-time secs)
+                                                        (reset! video-section index)
+                                                        (rf/dispatch [:ui/update-current-video-section secs index])
+                                                        ;; auto-pause when the section changes
+                                                        (when (not= previndex index)
+                                                          (.pause el)))))
                                                   (reset! !video-player el)))}]]
 
           ;;;;

@@ -11,7 +11,7 @@
             ["electron" :as electron :refer [ipcRenderer]]))
 
 
-;; (devtools/install!)       ;; we love https://github.com/binaryage/cljs-devtools
+(devtools/install!)       ;; we love https://github.com/binaryage/cljs-devtools
 (enable-console-print!)
 
 (def ipcRenderer (gobj/get electron "ipcRenderer"))
