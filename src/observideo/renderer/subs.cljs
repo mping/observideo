@@ -82,14 +82,15 @@
 (comment
   (matches? {"Peer" "Alone" "Gender" "Male"} {"Peer" "Alone" "Gender" nil})) ;;true
 
+(defn- normalize-prefix [n]
+  (-> (utils/fname n)
+      (subs 0 8)))
+
 (defn- agg->normalize-fn [all-filenames agg-type]
   "Returns a map indexed by type of aggregation.
   Aggregation is used to normalize similar filenames into something that can be grouped."
   (get {:identity  identity
-        :by-prefix (fn [n]
-                     (-> (utils/fname n)
-                         (subs 0 8)))}
-
+        :by-prefix normalize-prefix}
     agg-type
     ;; fallback
     identity))
