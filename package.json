@@ -92,7 +92,7 @@
   "keywords": [],
   "author": "Miguel Ping <miguel.ping@gmail.com>",
   "devDependencies": {
-    "electron": "^19.0.16",
+    "electron": "^15.5.5",
     "electron-builder": "~22.10.5",
     "shadow-cljs": "^2.19.2",
     "source-map-support": "^0.4.18"
