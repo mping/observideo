@@ -4,12 +4,12 @@
             [goog.object :as gobj]
             [taoensso.timbre :as log]
             [observideo.common.serde :as serde]
-            [observideo.renderer.components.antd :as antd]))
+            [observideo.renderer.components.antd :as antd]
+            ["electron" :as electron]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; IPC Main <> Renderer
 
-(defonce electron (js/require "electron"))
 (def ipcRenderer (gobj/get electron "ipcRenderer"))
 
 ;;;;

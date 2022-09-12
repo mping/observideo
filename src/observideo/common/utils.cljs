@@ -4,8 +4,11 @@
 
 (def separator (.-sep path))
 
-(defn fname [path]
-  (subs path (inc (s/last-index-of path separator))))
+(defn fname
+  [p]
+  (.basename path p))
+  ;(subs path (inc (s/last-index-of path sep)))))
 
-(defn relname [basedir path]
-  (subs path (inc (count basedir))))
+(defn relname [basedir p]
+  (subs p (inc (count basedir))))
+

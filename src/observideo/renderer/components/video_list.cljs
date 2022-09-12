@@ -8,13 +8,10 @@
             [observideo.renderer.ipcrenderer :as ipcrenderer]
             [observideo.renderer.components.video-edit :as video-edit]
             [observideo.renderer.components.antd :as antd]
-            [observideo.renderer.components.player :as player]))
+            [observideo.renderer.components.player :as player]
+            ["electron" :as electron :refer [dialog]]))
 
-
-(defonce electron (js/require "electron"))
-(defonce remote (.-remote electron))
-(defonce dialog (.-dialog remote))
-
+;(defonce dialog (.-dialog remote))
 
 ;;;;
 ;; actions

@@ -12,6 +12,7 @@ yarn run dev
 # on another shell
 yarn start
 ```
+On the electron window, press `Ctrl+H` to view `re-frame-10x` console.
 
 ## Release
 ```

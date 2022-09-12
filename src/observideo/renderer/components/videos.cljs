@@ -8,9 +8,8 @@
             [observideo.renderer.ipcrenderer :as ipcrenderer]
             [observideo.renderer.components.video-edit :as video-edit]
             [observideo.renderer.components.video-list :as video-list]
-            [observideo.renderer.components.antd :as antd]))
-
-(defonce electron (js/require "electron"))
+            [observideo.renderer.components.antd :as antd]
+            ["electron" :as electron]))
 
 ;;;;
 ;; UI

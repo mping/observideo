@@ -6,11 +6,11 @@
             [taoensso.timbre :as log]
             [observideo.common.utils :as utils]
             [observideo.renderer.ipcrenderer :as ipcrenderer]
+            [goog.string :as gstring]
+            [goog.string.format]
             [observideo.renderer.components.antd :as antd]
-            [observideo.renderer.components.player :as player]))
-
-
-(defonce electron (js/require "electron"))
+            [observideo.renderer.components.player :as player]
+            ["electron" :as electron]))
 
 (defn- select-template [video id]
   (rf/dispatch [:ui/update-current-video-template (str id)]))
@@ -20,7 +20,7 @@
   (let [template     @(rf/subscribe [:videos/current-template])
         observation  @(rf/subscribe [:videos/current-observation])
         video        @(rf/subscribe [:videos/current])
-        section0?    false ;; (= 0 (get-in video [:current-section :index]))
+        section0?    (= 0 (get-in video [:current-section :index]))
         attributes   (:attributes template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div.ant-table.ant-table-middle
@@ -87,7 +87,10 @@
             selected-template @(rf/subscribe [:videos/current-template])
             initial-interval  (get selected-template :interval 1)
             num-observations  (+ (int (/ duration initial-interval))
-                                 (if (> (mod duration initial-interval) 0) 1 0))]
+                                 (if (> (mod duration initial-interval) 0) 1 0))
+
+            tstart (* (max 0 (dec @video-section)) @!step-interval)
+            tend   (min duration (* @video-section @!step-interval))]
 
         (reset! !step-interval initial-interval)
 
@@ -104,16 +107,22 @@
                                  :ref         (fn [^js/Player el]
                                                 (when (some? el)
                                                   (.subscribeToStateChange el
-                                                                           (fn [jsobj]
-                                                                             (let [secs      (.-currentTime jsobj)
-                                                                                   previndex @video-section
-                                                                                   index     (int (/ secs @!step-interval))]
-                                                                               (reset! video-time secs)
-                                                                               (reset! video-section index)
-                                                                               (rf/dispatch [:ui/update-current-video-section secs index])
-                                                                               ;; auto-pause when the section changes
-                                                                               (when (not= previndex index)
-                                                                                 (.pause el)))))
+                                                    (fn [jsobj]
+                                                      (let [secs      (.-currentTime jsobj)
+                                                            previndex @video-section
+                                                            index     (if (= secs duration)
+                                                                        ;; last index?
+                                                                        (int (+ (int (/ secs @!step-interval))
+                                                                               (if (= 0 (rem duration @!step-interval))
+                                                                                 0
+                                                                                 1)))
+                                                                        (int (/ secs @!step-interval)))]
+                                                        (reset! video-time secs)
+                                                        (reset! video-section index)
+                                                        (rf/dispatch [:ui/update-current-video-section secs index])
+                                                        ;; auto-pause when the section changes
+                                                        (when (not= previndex index)
+                                                          (.pause el)))))
                                                   (reset! !video-player el)))}]]
 
           ;;;;
@@ -125,7 +134,8 @@
              (for [tmpl templates
                    :let [{:keys [id name]} tmpl]]
                [antd/option {:key id} name])]
-            [:span (str " interval: " @!step-interval "s, section: " @video-section)]]
+            [:span (str " interval: " (gstring/format "%s - %s" tstart tend)
+                     "s of " duration ", section: " @video-section)]]
            [antd/slider {:min            0
                          :max            num-observations
                          :value          @video-section
@@ -133,7 +143,8 @@
                          :tooltipVisible false
                          :dots           true
                          :onChange       #(do (reset! video-section %)
-                                              (.seek @!video-player (* % @!step-interval) "seconds")
+                                              (js/console.log "seeking section:" @video-section)
+                                              (.seek @!video-player (* % @!step-interval) "seconds")                                             
                                               (.pause @!video-player))}]
 
            ;; for videos in portrait mode, observation-table may get out of viewport
