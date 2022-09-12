@@ -33,6 +33,12 @@
       "node_modules/ffprobe-static/package.json"
     ],
     "mac": {
+      "target": {
+        "target": "default",
+        "arch": [
+          "universal"
+        ]
+      },
       "category": "public.app-category.education",
       "extraResources": [
         {
