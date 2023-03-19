@@ -1,6 +1,17 @@
 # Observideo
 ClojureScript + Shadow-cljs + Electron + re-frame
 
+## What
+
+Video annotation software: define a template, load your videos and then and annotate blocks of <X> seconds, then download as csv. You can also query your videos for specific annotations.
+
+screenshot.png![image](https://user-images.githubusercontent.com/88425/226198981-b54abd57-3456-46bf-ba51-938bcd44c08c.png)
+
+
+## Who
+
+Software developed with guidance from with Dra. Guida Veiga, Phd from University of Évora (orcid: https://orcid.org/0000-0002-0575-1757).
+
 ## How to Run
 ```
 yarn install electron -g
