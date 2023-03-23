@@ -4,7 +4,7 @@
     [observideo.main.db :as db]
     [taoensso.timbre :as log]
     [observideo.common.serde :as serde]
-    ["electron" :as electron :refer [BrowserWindow remote app ipcRender ipcMain]]
+    ["electron" :as electron :refer [BrowserWindow remote app ipcRender ipcMain dialog]]
     ["electron-dl" :as electron-dl :refer [download]]
     [promesa.core :as p]))
 
@@ -94,6 +94,19 @@
 
 ;;;;
 ;; ipc/ui
+
+
+
+(defmethod handle :ui/openDirectory [event sender data]
+  (let [opts (clj->js {:properties ["openDirectory"]})
+        dir  (.showOpenDialog dialog opts)]
+    (-> (p/resolved dir)
+      (p/then (fn [arg]
+                (let [[dir] (aget arg "filePaths")]
+                  (-> (media/read-dir dir)
+                      (.then #(send-message sender :main/update-videos {:videos % :folder dir}))))))
+      (p/catch (fn [err] (log/warn err))))))
+
 
 (defmethod handle :unknown [event sender data]
   (log/warn "UNKNOWN EVENT %s" event))

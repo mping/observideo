@@ -17,6 +17,8 @@
 ;; actions
 
 (defn- select-dir []
+  (ipcrenderer/send-message :ui/openDirectory {})
+  #_
   (let [opts (clj->js {:properties ["openDirectory"]})
         dir  (.showOpenDialog dialog opts)]
     (-> (p/resolved dir)

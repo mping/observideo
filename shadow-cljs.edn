@@ -37,6 +37,6 @@
                            :devtools         {:use-document-host false
                                               :before-load       observideo.renderer.core/stop
                                               :after-load        observideo.renderer.core/start
-                                              :preloads          [devtools.preload
-                                                                  day8.re-frame-10x.preload]}}}}
+                                              :preloads          [#_devtools.preload
+                                                                  #_day8.re-frame-10x.preload]}}}}
 

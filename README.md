@@ -14,8 +14,8 @@ Software developed with guidance from with Dra. Guida Veiga, Phd from University
 
 ## How to Run
 ```
-yarn install electron -g
-yarn install shadow-cljs -g
+yarn global add electron
+yarn global add shadow-cljs
 yarn install
 
 yarn run dev
