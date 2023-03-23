@@ -17,16 +17,8 @@
 ;; actions
 
 (defn- select-dir []
-  (ipcrenderer/send-message :ui/openDirectory {})
-  #_
-  (let [opts (clj->js {:properties ["openDirectory"]})
-        dir  (.showOpenDialog dialog opts)]
-    (-> (p/resolved dir)
-      (p/then (fn [arg]
-                (let [[dir] (aget arg "filePaths")]
-                  (rf/dispatch [:ui/update-videos-folder {:folder dir}]))))
-      (p/catch (fn [err] (log/warn err))))))
-
+  (ipcrenderer/send-message :ui/openDirectory {}))
+  
 ;;;;
 ;; UI
 
