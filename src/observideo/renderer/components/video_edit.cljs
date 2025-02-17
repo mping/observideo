@@ -1,11 +1,8 @@
 (ns observideo.renderer.components.video-edit
   (:require [clojure.string :as s]
-            [promesa.core :as p]
             [reagent.core :as r]
             [re-frame.core :as rf]
-            [taoensso.timbre :as log]
             [observideo.common.utils :as utils]
-            [observideo.renderer.ipcrenderer :as ipcrenderer]
             [goog.string :as gstring]
             [goog.string.format]
             [observideo.renderer.components.antd :as antd]
@@ -134,18 +131,38 @@
              (for [tmpl templates
                    :let [{:keys [id name]} tmpl]]
                [antd/option {:key id} name])]
+
+            [antd/button {:type :primary
+                          :onClick #(js/console.log %)
+                          :disabled (= :interval (:type selected-template))}
+             [antd/plus-circle-icon] "Add new section"]
+
             [:span (str " interval: " (gstring/format "%s - %s" tstart tend)
                      "s of " duration ", section: " @video-section)]]
-           [antd/slider {:min            0
-                         :max            num-observations
-                         :value          @video-section
-                         :key            "video-section-slider"
-                         :tooltipVisible false
-                         :dots           true
-                         :onChange       #(do (reset! video-section %)
-                                              (js/console.log "seeking section:" @video-section)
-                                              (.seek @!video-player (* % @!step-interval) "seconds")                                             
-                                              (.pause @!video-player))}]
+
+           ;; TODO use a different slider if type is :freeform
+           (if (= :type :interval)
+             [antd/slider {:min            0
+                           :max            num-observations
+                           :value          @video-section
+                           :key            "video-section-slider"
+                           :tooltipVisible false
+                           :dots           true
+                           :onChange       #(do (reset! video-section %)
+                                                (js/console.log "seeking section:" @video-section)
+                                                (.seek @!video-player (* % @!step-interval) "seconds")
+                                                (.pause @!video-player))}]
+             ;; ELSE
+             [antd/slider {:range false
+                           :marks {0 "Start" duration "End"}
+                           :max duration
+                           :step nil
+                           :tooltipVisible false
+                           :dots           true
+                           :onChange      #(do
+                                             (js/console.log "xxx" %)
+                                             (.seek @!video-player % "seconds")
+                                             (.pause @!video-player))}])
 
            ;; for videos in portrait mode, observation-table may get out of viewport
            ;; affix sticks it on top

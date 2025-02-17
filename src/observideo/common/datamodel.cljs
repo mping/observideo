@@ -7,6 +7,7 @@
 
 (def demo-template {:id         "fb52dd46-85cc-4864-b11e-44b8a5b28331"
                     :name       "Demo"
+                    :type       :interval
                     :interval   15
                     :next-index 3                           ;;monotonic counter to ensure old indexes preserve their value
                     :attributes {"Peer"   {:index 0 :values ["Alone" "Adults" "Peers" "Adults and Peers" "N/A"]}
@@ -41,6 +42,7 @@
             :spec {:id         string?
                    :name       string?
                    :interval   int?
+                   :type       (s/spec #{:interval :freeform})
                    :next-index int?
                    :attributes (s/map-of string? attribute-spec)}}))
 

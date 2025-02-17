@@ -16,6 +16,10 @@
   (let [new-template (assoc template :interval intv)]
     (rf/dispatch [:ui/update-current-template new-template])))
 
+(defn- update-template-type [template ttype]
+  (let [new-template (assoc template :type (keyword ttype))]
+    (rf/dispatch [:ui/update-current-template new-template])))
+
 ;; cols
 (defn- add-template-col [e template]
   (.preventDefault e)
@@ -74,6 +78,7 @@
         this         (r/current-component)
         tmpl-name    (:name template)
         intv         (:interval template)
+        ttype        (or (:type template) :interval)
         attributes   (:attributes template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div
@@ -90,12 +95,19 @@
        [antd/input {:value    tmpl-name
                     :onChange #(update-template-name template (-> % .-target .-value))}]]
 
+      [antd/form-item {:label (str "Type : ")}
+       [antd/select {:value ttype
+                     :options [{:value :interval :label "Interval"}
+                               {:value :freeform :label "Freeform"}]
+                     :onChange #(update-template-type template %)}]]
+
       [antd/form-item {:label (str "Interval (secs): " intv)}
        [antd/slider {:min            1
                      :max            60
                      :value          intv
                      :key            "slider"
                      :tooltipVisible false
+                     :disabled       (= ttype :interval)
                      :onChange       #(update-template-interval template %)}]]
 
       ;; dynamic fields
@@ -175,6 +187,10 @@
   (let [clj-record (js->clj record :keywordize-keys true)]
     (str/join ", " (map name (keys (:attributes clj-record))))))
 
+(defn- render-type [_ record]
+  (let [clj-record (js->clj record :keywordize-keys true)]
+    (or (:type clj-record) "<undefined>")))
+
 (defn- render-video-count [freqs _ record]
   (let [clj-record (js->clj record :keywordize-keys true)
         template-id (:id clj-record)]
@@ -202,6 +218,7 @@
                   :title      (constantly "Templates")}
       [antd/column {:title "Name" :dataIndex :name :render render-name}]
       [antd/column {:title "# Videos" :render (partial render-video-count videos-per-template)}]
+      [antd/column {:title "Type" :render render-type}]
       [antd/column {:title "Attributes" :render render-attributes}]
       [antd/column {:title "Actions" :render render-actions}]]
 
