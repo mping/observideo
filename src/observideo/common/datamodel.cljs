@@ -23,6 +23,7 @@
                  :missing?        false
                  :current-section {:time 0, :index 0}
                  :observations    [{"Peer" nil "Gender" "Same" "Type" "Exercise"}, {}]
+                 :sections        [{:time 15 :index 0}] ;; for freeform templates
                  :template-id     "7dd2479d-e829-4762-a0ac-de51a68461b5"})
 
 (def demo-query {:template-id "fb52dd46-85cc-4864-b11e-44b8a5b28331"
@@ -63,6 +64,7 @@
                    :size                     int?
                    :missing?                 boolean?
                    (ds/opt :current-section) section-spec
+                   (ds/opt :sections)        [section-spec]
                    (ds/opt :observations)    [observation-spec]
                    (ds/opt :template-id)     string?}}))
 

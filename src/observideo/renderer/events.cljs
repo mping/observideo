@@ -175,8 +175,7 @@
   [interceptors/queue-save-db]
   (fn [db [_ template]]
     (let [id (:id template)]
-      (-> db
-        (dissoc :templates/all id)))))
+      (update-in db [:templates/all] dissoc id))))
 
 (rf/reg-event-db
   :ui/deselect-template

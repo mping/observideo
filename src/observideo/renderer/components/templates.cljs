@@ -107,7 +107,7 @@
                      :value          intv
                      :key            "slider"
                      :tooltipVisible false
-                     :disabled       (= ttype :interval)
+                     :disabled       (= ttype :freeform)
                      :onChange       #(update-template-interval template %)}]]
 
       ;; dynamic fields

@@ -86,6 +86,7 @@
             num-observations  (+ (int (/ duration initial-interval))
                                  (if (> (mod duration initial-interval) 0) 1 0))
 
+            ;; todo calculate depending on template type
             tstart (* (max 0 (dec @video-section)) @!step-interval)
             tend   (min duration (* @video-section @!step-interval))]
 
@@ -105,6 +106,8 @@
                                                 (when (some? el)
                                                   (.subscribeToStateChange el
                                                     (fn [jsobj]
+                                                      ;; TODO fix calculations for type freeform
+                                                      ;; the
                                                       (let [secs      (.-currentTime jsobj)
                                                             previndex @video-section
                                                             index     (if (= secs duration)
@@ -132,16 +135,21 @@
                    :let [{:keys [id name]} tmpl]]
                [antd/option {:key id} name])]
 
+            [:br]
             [antd/button {:type :primary
-                          :onClick #(js/console.log %)
+                          :onClick #(js/console.log (:type selected-template))
                           :disabled (= :interval (:type selected-template))}
              [antd/plus-circle-icon] "Add new section"]
-
+            [:span " "]
+            [antd/button {:type :primary
+                          :onClick #(js/console.log (:type selected-template))
+                          :disabled (= :interval (:type selected-template))}
+             [antd/minus-circle-icon] "Remove current section"]
+            [:br]
             [:span (str " interval: " (gstring/format "%s - %s" tstart tend)
                      "s of " duration ", section: " @video-section)]]
 
-           ;; TODO use a different slider if type is :freeform
-           (if (= :type :interval)
+           (if (= :interval (:type selected-template))
              [antd/slider {:min            0
                            :max            num-observations
                            :value          @video-section
@@ -152,7 +160,7 @@
                                                 (js/console.log "seeking section:" @video-section)
                                                 (.seek @!video-player (* % @!step-interval) "seconds")
                                                 (.pause @!video-player))}]
-             ;; ELSE
+             ;; ELSE type = :freeform
              [antd/slider {:range false
                            :marks {0 "Start" duration "End"}
                            :max duration
