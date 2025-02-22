@@ -8,3 +8,35 @@
 }
 
 * {font-size: small}
+
+
+.heatmap {
+    display: grid;
+    grid-template-columns: repeat(53, 12px);
+    grid-gap: 2px;
+    height: 100%;
+}
+.cell {
+    width: 12px;
+    height: 12px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+}
+.level-1 { background-color: #c6e48b; }
+.level-2 { background-color: #7bc96f; }
+.level-3 { background-color: #239a3b; }
+.level-4 { background-color: #196127; }
+
+::-webkit-scrollbar {
+  width: 2px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 20px;
+  border: transparent;
+}

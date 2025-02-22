@@ -65,20 +65,21 @@
                        attribute]]))]]]))]]]]]]))
 
 (defn root []
-  (let [templates      (vals @(rf/subscribe [:templates/all]))
-        video          (rf/subscribe [:videos/current])
-        filename       (reaction (:filename @video))
+  (let [templates     (vals @(rf/subscribe [:templates/all]))
+        template       (rf/subscribe [:videos/current-template])
+        video         (rf/subscribe [:videos/current])
+        filename      (reaction (:filename @video))
 
         ;; these are "local component state"
         ;; some can be used to re-trigger a render (r/atom)
         ;; others are just vars (clojure.core/atom)
-        !video-player  (atom nil)
-        video-time     (r/atom 0)]
+        !video-player (atom nil)
+        video-time    (r/atom 0)]
 
     ;; form-2 component
     (fn []
       ;; trigger re-render when some attr on the video changes
-      (let [selected-template  (rf/subscribe [:videos/current-template])]
+      (let [selected-template (rf/subscribe [:videos/current-template])]
 
         [:div
          [antd/row {:gutter [8, 8]}
@@ -98,7 +99,7 @@
                                                                                (when-not (= secs @video-time)
                                                                                  (reset! video-time (int secs))
                                                                                  (rf/dispatch [:ui/update-current-video-section secs])))))
-                                                                                 ;(.pause el)))))
+                                                  ;(.pause el)))))
                                                   (reset! !video-player el)))}]]
 
           ;;;;
@@ -120,5 +121,48 @@
            ;; for videos in portrait mode, observation-table may get out of viewport
            ;; affix sticks it on top
            [antd/affix {}
-            [observation-table]]]]]))))
+            [observation-table]]]]
+
+         [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+          [antd/col {:span 2}]
+          [antd/col {:span 22}
+           (let [update-scroll-left (fn [element-id percent]
+                                      (let [el (.getElementById js/document element-id)]
+                                        (let [max-scroll (- (.-scrollWidth el) (.-clientWidth el))
+                                              new-scroll (* (/ percent 100) max-scroll)]
+                                          (set! (.-scrollLeft el) new-scroll))))]
+
+             [antd/slider {:onChange #(update-scroll-left "heatmap" %)}])]]
+
+         (let [labels        (reaction
+                               (mapv first (:attributes @template)))
+               colors        ["#ebedf0" "#c6e48b" "#7bc96f" "#239a3b" "red"]
+
+               rows          (count @labels)
+               cols          (int (:duration @video))
+               data          (r/atom
+                               (vec (map #(rand-int 5) (range (* rows cols)))))
+
+               cell-size     16
+               padding       2
+               height        (* (+ padding cell-size) (inc rows))]
+
+           [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+            ;; labels
+            [antd/col {:span 2 :style {"height" (str height "px")}}
+             [:svg {:class "heatmap" :style {"width" "100%"}}
+              (for [[i day] (map-indexed vector @labels)]
+                [:text {:key       (str "label-" i) :x 0 :y (+ (* i (+ cell-size padding)) 10)
+                        :font-size 10 :fill "#000" :text-anchor "start"} day])]]
+            ;; heatmap
+            [antd/col {:span 22 :style {"height" (str height "px")}}
+             [:div {:id "heatmap" :style {"overflow" "auto" "height" "100%"}}
+              [:svg {:width (str (* cell-size cols) "px") :class "heatmap"}
+               (for [[index level] (map-indexed vector @data)]
+                 (let [x (* (quot index rows) (+ cell-size padding))
+                       y (* (mod index rows) (+ cell-size padding))]
+                   [:rect {:key   index
+                           :x     x :y y
+                           :width cell-size :height cell-size
+                           :fill  (nth colors level)}]))]]]])]))))
 
