@@ -12,21 +12,12 @@
   (let [new-template (assoc template :name newname)]
     (rf/dispatch [:ui/update-current-template new-template])))
 
-(defn- update-template-interval [template intv]
-  (let [new-template (assoc template :interval intv)]
-    (rf/dispatch [:ui/update-current-template new-template])))
-
-(defn- update-template-type [template ttype]
-  (let [new-template (assoc template :type (keyword ttype))]
-    (rf/dispatch [:ui/update-current-template new-template])))
-
 ;; cols
 (defn- add-template-col [e template]
   (.preventDefault e)
   (let [attrname     (str (gensym))
-        next-index   (:next-index template)
-        new-template (update-in template [:attributes] assoc attrname {:index next-index :values ["Some" "Values"]})
-        new-template (assoc new-template :next-index (inc next-index))]
+        attrs        (:attributes template)
+        new-template (update-in template [:attributes] assoc attrname {:index (count attrs) :values ["Some" "Values"]})]
     (rf/dispatch [:ui/update-current-template new-template])))
 
 (defn- delete-template-col [e template name]
@@ -74,12 +65,10 @@
 ;; Main template form
 
 (defn- template-form []
-  (let [template     @(rf/subscribe [:templates/current])
+  (let [template     (rf/subscribe [:templates/current])
         this         (r/current-component)
-        tmpl-name    (:name template)
-        intv         (:interval template)
-        ttype        (or (:type template) :interval)
-        attributes   (:attributes template)
+        tmpl-name    (:name @template)
+        attributes   (:attributes @template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div
      [antd/page-header {:title  tmpl-name :subTitle "Edit"
@@ -89,26 +78,11 @@
                  :name       "basic"
                  :size       "small"
                  :ref        "form"
-                 :onFinish   #(handle-submit this % template)}
+                 :onFinish   #(handle-submit this % @template)}
       ;; main name
       [antd/form-item {:label "Template Name" #_#_:rules [{:required true :message "Field is required"}]}
        [antd/input {:value    tmpl-name
-                    :onChange #(update-template-name template (-> % .-target .-value))}]]
-
-      [antd/form-item {:label (str "Type : ")}
-       [antd/select {:value ttype
-                     :options [{:value :interval :label "Interval"}
-                               {:value :freeform :label "Freeform"}]
-                     :onChange #(update-template-type template %)}]]
-
-      [antd/form-item {:label (str "Interval (secs): " intv)}
-       [antd/slider {:min            1
-                     :max            60
-                     :value          intv
-                     :key            "slider"
-                     :tooltipVisible false
-                     :disabled       (= ttype :freeform)
-                     :onChange       #(update-template-interval template %)}]]
+                    :onChange #(update-template-name @template (-> % .-target .-value))}]]
 
       ;; dynamic fields
       [:table {:style {:width "100%"}}
@@ -119,19 +93,19 @@
                                 [:td {:key (:index v)}
                                  [antd/form-item {#_#_:rules [{:required true :message "Field is required"}]}
                                   [antd/input {:value      (name header)
-                                               :onChange   #(update-template-col template header (-> % .-target .-value))
+                                               :onChange   #(update-template-col @template header (-> % .-target .-value))
                                                :size       "small"
                                                :addonAfter (r/as-element
                                                              [antd/button {:size    "small"
                                                                            :type    "link"
                                                                            :href    "#"
-                                                                           :onClick #(delete-template-col % template header)}
+                                                                           :onClick #(delete-template-col % @template header)}
                                                               [antd/delete-icon]])}]]])
-                   sorted-attrs)
-           [[:td {:key "add"}
-             ;; add a new column
-             [antd/button {:type "link" :onClick #(add-template-col % template)}
-              [antd/plus-circle-icon]]]])]]
+                              sorted-attrs)
+                 [[:td {:key "add"}
+                   ;; add a new column
+                   [antd/button {:type "link" :onClick #(add-template-col % @template)}
+                    [antd/plus-circle-icon]]]])]]
 
        [:tbody nil
         [:tr nil [:td {:colSpan 0}]]
@@ -152,17 +126,17 @@
                   [antd/input {:value      val
                                :key        (str header "-input-attr-" i)
                                :size       "small"
-                               :onChange   #(update-template-attr template header i (-> % .-target .-value))
+                               :onChange   #(update-template-attr @template header i (-> % .-target .-value))
                                :addonAfter (r/as-element
                                              [antd/button {:size    "small"
                                                            :type    "link"
                                                            :href    "#"
-                                                           :onClick #(delete-template-attr % template header i)}
+                                                           :onClick #(delete-template-attr % @template header i)}
                                               [antd/minus-circle-icon]])}]]])
               [:tr nil
                [:td nil
                 ;; add a new row
-                [antd/button {:size "small" :type "link" :onClick #(add-template-attr % template header)}
+                [antd/button {:size "small" :type "link" :onClick #(add-template-attr % @template header)}
                  [antd/plus-icon]]]]]]])]]]
 
       ;; save button
@@ -187,12 +161,8 @@
   (let [clj-record (js->clj record :keywordize-keys true)]
     (str/join ", " (map name (keys (:attributes clj-record))))))
 
-(defn- render-type [_ record]
-  (let [clj-record (js->clj record :keywordize-keys true)]
-    (or (:type clj-record) "<undefined>")))
-
 (defn- render-video-count [freqs _ record]
-  (let [clj-record (js->clj record :keywordize-keys true)
+  (let [clj-record  (js->clj record :keywordize-keys true)
         template-id (:id clj-record)]
     (get freqs template-id 0)))
 
@@ -207,18 +177,17 @@
       [antd/delete-icon] " delete"]]))
 
 (defn- templates-table []
-  (let [templates           @(rf/subscribe [:templates/all])
-        videos-per-template @(rf/subscribe [:templates/video-count])]
+  (let [templates           (rf/subscribe [:templates/all])
+        videos-per-template (rf/subscribe [:templates/video-count])]
     [:div
-     [antd/table {:dataSource (vals templates)
+     [antd/table {:dataSource (vals @templates)
                   :size       "small"
                   :rowKey     "name"
                   :bordered   true
                   :pagination {:position "top"}
                   :title      (constantly "Templates")}
       [antd/column {:title "Name" :dataIndex :name :render render-name}]
-      [antd/column {:title "# Videos" :render (partial render-video-count videos-per-template)}]
-      [antd/column {:title "Type" :render render-type}]
+      [antd/column {:title "# Videos" :render (partial render-video-count @videos-per-template)}]
       [antd/column {:title "Attributes" :render render-attributes}]
       [antd/column {:title "Actions" :render render-actions}]]
 
@@ -233,19 +202,17 @@
     templates-table))
 
 (defn- breadcrumbs []
-  (let [current @(rf/subscribe [:templates/current])
-        name    (:name current)]
+  (let [current (rf/subscribe [:templates/current])]
     [antd/breadcrumb
      [antd/breadcrumb-item
       [:a {:onClick #(rf/dispatch [:ui/deselect-template])} "templates"]]
-     (when name
-       [antd/breadcrumb-item name])]))
-
+     (when (:name @current)
+       [antd/breadcrumb-item (:name @current)])]))
 
 (defn ui []
-  (let [current @(rf/subscribe [:templates/current])]
+  (let [current (rf/subscribe [:templates/current])]
     [:div
      [breadcrumbs]
-     [(show-template-panel current)]]))
+     [(show-template-panel @current)]]))
 
 

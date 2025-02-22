@@ -24,11 +24,6 @@
 (rf/reg-sub :videos/current
   (fn [db _] (:videos/current db)))
 
-(rf/reg-sub-raw :videos/current-section
-  (fn [db _]
-    (reaction
-      (get-in @db [:videos/current :current-section]))))
-
 (rf/reg-sub-raw :videos/current-template
   (fn [db _]
     (reaction
@@ -38,9 +33,12 @@
 (rf/reg-sub-raw :videos/current-observation
   (fn [db _]
     (reaction
-      (let [{:keys [index]} (get-in @db [:videos/current :current-section])
+      (let [index (get-in @db [:videos/current :current-time])
             current-observation (get-in @db [:videos/current :observations index])]
         current-observation))))
+
+;;;;
+;; templates
 
 (rf/reg-sub-raw :templates/video-count
   (fn [db _]

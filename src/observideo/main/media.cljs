@@ -32,7 +32,7 @@
   (let [ext     (if (= (.-platform js/process) "win32") ".exe" "")
         ffppath (.join path (str (.-resourcesPath js/process) "/ffprobe" ext))]
         ;; UNUSED ffmpath (.join path (str (.-resourcesPath js/process) "/ffmpeg"  ext))
-        
+
 
     (log/debug "Using resources path:")
     ;; UNUSED (log/debug "ffmpeg:"  ffmpath)
@@ -41,18 +41,17 @@
     ;; UNUSED (.setFfmpegPath ffmpeg-command  (normalize-path ffmpath))
     (.setFfprobePath ffmpeg-command (normalize-path ffppath))))
 
-
-
 (defn checksum [{:strs [filename] :as video}]
   (assoc video "md5sum" (.sync md5 filename)))
 
 (defn db-info [video]
-  (merge video {"missing" false
-                "info"    {:a "changeme"}}))
+  (merge video {"missing?"      false
+                "current-time" 0
+                "info"         {:some "thng"}}))
 
 (defn filter-keys [video]
   (-> video
-    (select-keys ["filename" "size" "duration" "info" "md5sum" "missing"])
+    (select-keys ["filename" "size" "duration" "info" "md5sum" "missing" "current-time" "missing?"])
     (walk/keywordize-keys)))
 
 (defn read-metadata [path]

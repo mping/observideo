@@ -31,6 +31,8 @@
 
                            ;#_#_#_#_
                            :compiler-options {:closure-warnings {:global-this :off}
+                                              :warnings         {:undeclared-var false
+                                                                 :redef          false}
                                               :closure-defines  {re-frame.trace.trace-enabled? true}
                                               :infer-externs    :auto}
 

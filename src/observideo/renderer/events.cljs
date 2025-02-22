@@ -1,9 +1,9 @@
 (ns observideo.renderer.events
   (:require
-   [re-frame.core :as rf]
-   ;[day8.re-frame.tracing :refer-macros [fn-traced]]
-   [observideo.common.datamodel :as datamodel]
-   [observideo.renderer.interceptors :as interceptors]))
+    [re-frame.core :as rf]
+    ;[day8.re-frame.tracing :refer-macros [fn-traced]]
+    [observideo.common.datamodel :as datamodel]
+    [observideo.renderer.interceptors :as interceptors]))
 
 (def demo-template datamodel/demo-template)
 
@@ -31,17 +31,16 @@
   [oldm newm]
   (let [all-videos (set (concat (keys oldm) (keys newm)))]
     (into {}
-      (for [filename all-videos
-            :let [oldvideo (get oldm filename)
-                  newvideo (get newm filename)
-                  missing? (nil? newvideo)
-                  same?    (= (:md5sum newvideo)
-                             (:md5sum oldvideo))
-                  video    (if (or same? missing?) oldvideo newvideo)
-                  video    (assoc video :missing? missing?)]]
-        ;; if the video is the same, keep the data
-        ;; otherwise put a new video, losing all data and template
-        [filename video]))))
+          (for [filename all-videos
+                :let [oldvideo (get oldm filename)
+                      newvideo (get newm filename)
+                      missing? (nil? newvideo)
+                      same?    (= (:md5sum newvideo) (:md5sum oldvideo))
+                      video    (if (or same? missing?) oldvideo newvideo)
+                      video    (assoc video :missing? missing?)]]
+            ;; if the video is the same, keep the data
+            ;; otherwise put a new video, losing all data and template
+            [filename video]))))
 
 (rf/reg-event-db
   :main/update-videos
@@ -88,18 +87,9 @@
 ;;;;
 ;; video editing
 
-(defn- count-observations [duration step-interval]
-  (+ (int (/ duration step-interval))
-    (if (> (mod duration step-interval) 0) 1 0)))
-
-(defn- make-empty-observations [template n]
-  (->> (range)
-    (take n)
-    (map (fn [_]
-           (let [attrs (:attributes template)]
-             ;; create a mapping {"name" => nil}
-             (reduce-kv (fn [m k _] (assoc m (str k) nil)) {} attrs))))
-    (vec)))
+(defn- make-empty-observation [{:keys [attributes] :as template}]
+  ;; create a mapping {"name" => nil}
+  (reduce-kv (fn [m k _] (assoc m (str k) nil)) {} attributes))
 
 (rf/reg-event-db
   :ui/update-current-video-template
@@ -107,36 +97,37 @@
   (fn [db [_ id]]
     (let [current-video      (:videos/current db)
           template           (get-in db [:templates/all id])
-          template-interval  (:interval template)
-          total-observations (count-observations (:duration current-video) template-interval)
-          new-observations   (make-empty-observations template total-observations)
-          updated-video      (assoc current-video :template-id id :observations new-observations)
+          total-observations (int (:duration current-video))
+          new-observations   (mapv #(make-empty-observation template) (range total-observations))
+          updated-video      (assoc current-video :template-id id
+                                                  :observations new-observations
+                                                  :current-time 0)
           fullpath           (:filename updated-video)]
       (-> db
-        (assoc-in [:videos/current] updated-video)
-        (assoc-in [:videos/all fullpath] updated-video)))))
+          (assoc-in [:videos/current] updated-video)
+          (assoc-in [:videos/all fullpath] updated-video)))))
 
 (rf/reg-event-db
   :ui/update-current-video-section
-  (fn [db [_ time index]]
+  (fn [db [_ time]]
     (let [current-video (:videos/current db)
-          updated-video (assoc current-video :current-section {:time time :index index})
+          updated-video (assoc current-video :current-time (int time))
           fullpath      (:filename updated-video)]
       (-> db
-        (assoc-in [:videos/current] updated-video)
-        (assoc-in [:videos/all fullpath] updated-video)))))
+          (assoc-in [:videos/current] updated-video)
+          (assoc-in [:videos/all fullpath] updated-video)))))
 
 (rf/reg-event-db
   :ui/update-current-video-current-section-observation
   [interceptors/queue-save-db]
   (fn [db [_ observation]]
     (let [current-video     (:videos/current db)
-          observation-index (get-in current-video [:current-section :index])
+          observation-index (get-in current-video [:current-time])
           updated-video     (assoc-in current-video [:observations observation-index] observation)
           fullpath          (:filename updated-video)]
       (-> db
-        (assoc-in [:videos/current] updated-video)
-        (assoc-in [:videos/all fullpath] updated-video)))))
+          (assoc-in [:videos/current] updated-video)
+          (assoc-in [:videos/all fullpath] updated-video)))))
 
 ;;;;
 ;; templates
@@ -148,7 +139,7 @@
     (let [new-template (dissoc demo-template :id)
           id           (str (random-uuid))]
       (-> db
-        (assoc-in [:templates/all id] (assoc new-template :id id))))))
+          (assoc-in [:templates/all id] (assoc new-template :id id))))))
 
 (rf/reg-event-db
   :ui/edit-template
@@ -161,14 +152,14 @@
   [interceptors/queue-save-db]
   (fn [db [_ {:keys [id] :as template}]]
     (-> db
-      (assoc-in [:templates/all id] template))))
+        (assoc-in [:templates/all id] template))))
 
 (rf/reg-event-db
   :ui/update-current-template
   [interceptors/queue-save-db]
   (fn [db [_ template]]
     (-> db
-      (assoc-in [:templates/current] template))))
+        (assoc-in [:templates/current] template))))
 
 (rf/reg-event-db
   :ui/delete-template

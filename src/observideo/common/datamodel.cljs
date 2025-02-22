@@ -7,24 +7,19 @@
 
 (def demo-template {:id         "fb52dd46-85cc-4864-b11e-44b8a5b28331"
                     :name       "Demo"
-                    :type       :interval
-                    :interval   15
-                    :next-index 3                           ;;monotonic counter to ensure old indexes preserve their value
                     :attributes {"Peer"   {:index 0 :values ["Alone" "Adults" "Peers" "Adults and Peers" "N/A"]}
                                  "Gender" {:index 1 :values ["Same" "Opposite" "Both" "N/A"]}
                                  "Type"   {:index 2 :values ["Roleplay" "Rough and Tumble" "Exercise"]}}})
 
 
-(def demo-video {:filename        "/home/mping/Download … deo_720x480_30mb.mp4"
-                 :duration        183.318
-                 :info            {:a "changeme"}
-                 :md5sum          "changeme"
-                 :size            31551484
-                 :missing?        false
-                 :current-section {:time 0, :index 0}
-                 :observations    [{"Peer" nil "Gender" "Same" "Type" "Exercise"}, {}]
-                 :sections        [{:time 15 :index 0}] ;; for freeform templates
-                 :template-id     "7dd2479d-e829-4762-a0ac-de51a68461b5"})
+(def demo-video {:filename     "/home/mping/Download … deo_720x480_30mb.mp4"
+                 :duration     183.318
+                 :info         {:a "changeme"}
+                 :md5sum       "changeme"
+                 :size         31551484
+                 :missing?     false
+                 :observations [{"Peer" nil "Gender" "Same" "Type" "Exercise"}, {}]
+                 :template-id  "7dd2479d-e829-4762-a0ac-de51a68461b5"})
 
 (def demo-query {:template-id "fb52dd46-85cc-4864-b11e-44b8a5b28331"
                  :aggregator  :identity                     ;; OR :by-prefix
@@ -42,9 +37,6 @@
   (ds/spec {:name ::template
             :spec {:id         string?
                    :name       string?
-                   :interval   int?
-                   :type       (s/spec #{:interval :freeform})
-                   :next-index int?
                    :attributes (s/map-of string? attribute-spec)}}))
 
 (def section-spec
@@ -57,16 +49,15 @@
 
 (def video-spec
   (ds/spec {:name ::video
-            :spec {:filename                 string?
-                   :duration                 number?
-                   :info                     any?
-                   :md5sum                   string?
-                   :size                     int?
-                   :missing?                 boolean?
-                   (ds/opt :current-section) section-spec
-                   (ds/opt :sections)        [section-spec]
-                   (ds/opt :observations)    [observation-spec]
-                   (ds/opt :template-id)     string?}}))
+            :spec {:filename                    string?
+                   :duration                    number?
+                   :info                        any?
+                   :md5sum                      string?
+                   :size                        int?
+                   :missing?                    boolean?
+                   :current-time                nat-int?
+                   (ds/opt :observations)       [observation-spec]
+                   (ds/opt :template-id)        string?}}))
 
 
 (def db-spec
@@ -102,18 +93,18 @@
 
 (defn- errors [filename template observation]
   (->> observation
-    (map-indexed (fn [i [attr val]]
-                   (let [values (get-in template [attr :values] [])
-                         idx    (.indexOf values val)]
-                     (when (and (some? val) (< idx 0))
-                       (let [message (gstr/format "An issue occured with video '%s'" filename)
-                             descr   (gstr/format "Observation number %s: Failed to find index for attribute '%s' with value '%s'"
-                                       (inc i) attr val filename)]
-                         (log/warnf "'%s': Failed to find index for attr '%s' value '%s'" filename attr val)
-                         {:message     message
-                          :description descr})))))
-    (filter identity)
-    (flatten)))
+       (map-indexed (fn [i [attr val]]
+                      (let [values (get-in template [attr :values] [])
+                            idx    (.indexOf values val)]
+                        (when (and (some? val) (< idx 0))
+                          (let [message (gstr/format "An issue occured with video '%s'" filename)
+                                descr   (gstr/format "Observation number %s: Failed to find index for attribute '%s' with value '%s'"
+                                                     (inc i) attr val filename)]
+                            (log/warnf "'%s': Failed to find index for attr '%s' value '%s'" filename attr val)
+                            {:message     message
+                             :description descr})))))
+       (filter identity)
+       (flatten)))
 
 
 (defn- observation->index0
@@ -126,15 +117,15 @@
             ;; "xxx"    -> index
             ;; notfound -> -1
             (or (and val idx)
-              nil)))
-    observation))
+                nil)))
+        observation))
 
 
 (defn observation->index1
   "1-based version ov observation->index0, keeping -1 for not found"
   [template observation]
   (mapv #(if (>= % 0) (inc %) %)
-    (observation->index0 template observation)))
+        (observation->index0 template observation)))
 
 
 (defn- video->csv
