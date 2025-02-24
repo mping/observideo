@@ -60,7 +60,6 @@
 (rf/reg-sub :query/current
   (fn [db _] (:query/current db)))
 
-
 ;;;;
 ;; query helpers
 
@@ -124,8 +123,6 @@
     ;(run-query videos aggregator bottom)
     (run-query2 videos :by-prefix top))
   "")
-
-
 
 (rf/reg-sub :query/result
   (fn [db _]

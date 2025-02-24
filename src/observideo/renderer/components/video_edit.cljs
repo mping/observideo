@@ -15,7 +15,6 @@
 
 (defn- observation-table [video-time]
   (let [template     (rf/subscribe [:videos/current-template])
-        ;observation  (rf/subscribe [:videos/current-observation])
         video        (rf/subscribe [:videos/current])
         observation  (reaction
                        (get-in @video [:observations (int @video-time)]))
@@ -67,62 +66,85 @@
                                                         (assoc @observation header attribute) @video-time])))}
                        attribute]]))]]]))]]]]]]))
 
-
 ;;;;
-;; re-renders will occur due to change in video-time
-;; this can be later optimized
-(defn- annotations-table [video template video-time]
+;; table
+;;
 
-  [:div
-   [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
-    [antd/col {:span 2}]
-    [antd/col {:span 22}
-     (let [update-scroll-left (fn [element-id percent]
-                                (let [el (.getElementById js/document element-id)]
-                                  (let [max-scroll (- (.-scrollWidth el) (.-clientWidth el))
-                                        new-scroll (* (/ percent 100) max-scroll)]
-                                    (set! (.-scrollLeft el) new-scroll))))]
+(defn- annotations-slider [video video-time]
+  [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+   [antd/col {:span 2}]
+   [antd/col {:span 22}
+    (let [update-scroll-left (fn [element-id percent]
+                               (let [el (.getElementById js/document element-id)]
+                                 (let [max-scroll (- (.-scrollWidth el) (.-clientWidth el))
+                                       new-scroll (* (/ percent 100) max-scroll)]
+                                   (set! (.-scrollLeft el) new-scroll))))]
 
-       [antd/slider {:value @video-time
-                     :max (int (:duration @video))
-                     :onChange #(update-scroll-left "heatmap-viewport" %)}])]]
+      [antd/slider {:value    @video-time
+                    :max      (int (:duration @video))
+                    :onChange #(do
+                                 (reset! video-time %)
+                                 (update-scroll-left "heatmap-viewport" %))}])]])
 
-   (let [labels    (reaction
-                     (mapv first (:attributes @template)))
-         colors    ["#ebedf0" "#c6e48b" "#7bc96f" "#239a3b" "red"]
+(defn- annotations-map [video template]
+  (let [observations (reaction
+                       (get-in @video [:observations]))
+        labels       (reaction
+                       (mapv first (:attributes @template)))
+        rows         (count @labels)
+        cols         (int (:duration @video))
 
-         rows      (count @labels)
-         cols      (int (:duration @video))
-         data      (r/atom
-                     (vec (map #(rand-int 5) (range (* rows cols)))))
+        ;; ui attrs
+        colors       ["#d3d1dd" "#d0c7dd" "#c5bfd4" "#a39db8" "#9b93a"]
+        ncolors      (count colors)
+        index->obs   (fn [index]
+                       (let [secs (int (quot index rows))]
+                           (get-in @observations [secs])))
+        color-cell   (fn [index]
+                       (let [obs (index->obs index)
+                             filled? (-> (filter identity (vals obs))
+                                         (count))]
+                         (when (pos-int? filled?)
+                           (js/console.log filled? (get colors filled?)))
+                         (if (>= filled? ncolors)
+                           (last colors)
+                           (get colors filled?))))
+        handle-click (fn [index]
+                       (let [secs      (int (quot index rows))
+                             obs-index (int (mod index rows))
+                             obs-key   (get @labels obs-index)
+                             obs-val   (get-in @observations [secs obs-key])]
+                         (js/console.log obs-key "" obs-val)))
+        ;; layout attrs
+        cell-size    16
+        padding      2
+        height       (* (+ padding cell-size) (inc rows))]
 
-         cell-size 16
-         padding   2
-         height    (* (+ padding cell-size) (inc rows))]
-
-     [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
-      ;; labels
-      [antd/col {:span 2 :style {"height" (str height "px")}}
-       [:svg {:class "heatmap" :style {"width" "100%"}}
-        (for [[i day] (map-indexed vector @labels)]
-          [:text {:key       (str "label-" i) :x 0 :y (+ (* i (+ cell-size padding)) 10)
-                  :font-size 10 :fill "#000" :text-anchor "start"} day])]]
-      ;; heatmap
-      [antd/col {:span 22 :style {"height" (str height "px")}}
-       [:div {:id "heatmap-viewport" :style {"overflow" "auto" "height" "100%"}}
-        [:svg {:width (str (* cell-size cols) "px") :class "heatmap"}
-         (for [[index level] (map-indexed vector @data)]
-           (let [x (* (quot index rows) (+ cell-size padding))
-                 y (* (mod index rows) (+ cell-size padding))]
-             [:rect {:key   index
-                     :x     x :y y
-                     :width cell-size :height cell-size
-                     :fill  (nth colors level)}]))]]]])])
-
+    [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+     ;; labels
+     [antd/col {:span 2 :style {"height" (str height "px")}}
+      [:svg {:class "heatmap" :style {"width" "100%"}}
+       (doall
+         (for [[i day] (map-indexed vector @labels)]
+           [:text {:key       (str "label-" i) :x 0 :y (+ (* i (+ cell-size padding)) 10)
+                   :font-size 10 :fill "#000" :text-anchor "start"} day]))]]
+     ;; heatmap
+     [antd/col {:span 22 :style {"height" (str height "px")}}
+      [:div {:id "heatmap-viewport" :style {"overflow" "auto" "height" "100%"}}
+       [:svg {:width (str (* cell-size cols) "px") :class "heatmap"}
+        (doall
+          (for [index (range (* rows cols))]
+            (let [x (* (quot index rows) (+ cell-size padding))
+                  y (* (mod index rows) (+ cell-size padding))]
+              [:rect {:key     index
+                      :x       x :y y
+                      :width   cell-size :height cell-size
+                      :fill    (color-cell index)
+                      :onClick #(handle-click index)}])))]]]]))
 
 (defn root []
   (let [templates     (vals @(rf/subscribe [:templates/all]))
-        template       (rf/subscribe [:videos/current-template])
+        template      (rf/subscribe [:videos/current-template])
         video         (rf/subscribe [:videos/current])
         filename      (reaction (:filename @video))
         video-time    (r/atom 0)
@@ -154,7 +176,7 @@
                                                                              (let [secs (.-currentTime jsobj)]
                                                                                (when-not (= secs @video-time)
                                                                                  (reset! video-time (int secs))))))
-                                                                                 ;(rf/dispatch [:ui/update-current-video-section secs])))))
+                                                  ;(rf/dispatch [:ui/update-current-video-section secs])))))
                                                   ;(.pause el)))))
                                                   (reset! !video-player el)))}]]
 
@@ -179,4 +201,6 @@
            [antd/affix {}
             [observation-table video-time]]]]
 
-         [annotations-table video template video-time]]))))
+         [:div
+          [annotations-slider video video-time]
+          [annotations-map video template]]]))))
