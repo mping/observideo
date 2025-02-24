@@ -46,12 +46,11 @@
 
 (defn db-info [video]
   (merge video {"missing?"      false
-                "current-time" 0
                 "info"         {:some "thng"}}))
 
 (defn filter-keys [video]
   (-> video
-    (select-keys ["filename" "size" "duration" "info" "md5sum" "missing" "current-time" "missing?"])
+    (select-keys ["filename" "size" "duration" "info" "md5sum" "missing" "missing?"])
     (walk/keywordize-keys)))
 
 (defn read-metadata [path]

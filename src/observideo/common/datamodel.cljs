@@ -55,7 +55,6 @@
                    :md5sum                      string?
                    :size                        int?
                    :missing?                    boolean?
-                   :current-time                nat-int?
                    (ds/opt :observations)       [observation-spec]
                    (ds/opt :template-id)        string?}}))
 

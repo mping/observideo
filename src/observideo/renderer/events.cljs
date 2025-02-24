@@ -100,8 +100,7 @@
           total-observations (int (:duration current-video))
           new-observations   (mapv #(make-empty-observation template) (range total-observations))
           updated-video      (assoc current-video :template-id id
-                                                  :observations new-observations
-                                                  :current-time 0)
+                                                  :observations new-observations)
           fullpath           (:filename updated-video)]
       (-> db
           (assoc-in [:videos/current] updated-video)
@@ -120,9 +119,9 @@
 (rf/reg-event-db
   :ui/update-current-video-current-section-observation
   [interceptors/queue-save-db]
-  (fn [db [_ observation]]
+  (fn [db [_ observation time]]
     (let [current-video     (:videos/current db)
-          observation-index (get-in current-video [:current-time])
+          observation-index (int time)
           updated-video     (assoc-in current-video [:observations observation-index] observation)
           fullpath          (:filename updated-video)]
       (-> db

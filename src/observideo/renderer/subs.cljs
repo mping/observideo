@@ -30,6 +30,7 @@
       (let [template-id (get-in @db [:videos/current :template-id])]
         (get-in @db [:templates/all template-id])))))
 
+#_
 (rf/reg-sub-raw :videos/current-observation
   (fn [db _]
     (reaction
