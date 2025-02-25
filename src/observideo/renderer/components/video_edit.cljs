@@ -8,6 +8,7 @@
             [goog.string.format]
             [observideo.renderer.components.antd :as antd]
             [observideo.renderer.components.player :as player]
+            [observideo.renderer.chromajs :as cjs]
             ["electron" :as electron]))
 
 (defn- select-template [video id]
@@ -86,22 +87,22 @@
                                  (reset! video-time %)
                                  (update-scroll-left "heatmap-viewport" %))}])]])
 
-(defn- annotations-map [video template]
+(defn- annotations-map [video template jump-fn]
   (let [observations (reaction
                        (get-in @video [:observations]))
         labels       (reaction
                        (mapv first (:attributes @template)))
-        rows         (count @labels)
+        nrows        (count @labels)
         cols         (int (:duration @video))
 
         ;; ui attrs
-        colors       ["#d3d1dd" "#d0c7dd" "#c5bfd4" "#a39db8" "#9b93a"]
+        colors       (cjs/scale nrows)
         ncolors      (count colors)
         index->obs   (fn [index]
-                       (let [secs (int (quot index rows))]
-                           (get-in @observations [secs])))
+                       (let [secs (int (quot index nrows))]
+                         (get-in @observations [secs])))
         color-cell   (fn [index]
-                       (let [obs (index->obs index)
+                       (let [obs     (index->obs index)
                              filled? (-> (filter identity (vals obs))
                                          (count))]
                          (when (pos-int? filled?)
@@ -110,15 +111,16 @@
                            (last colors)
                            (get colors filled?))))
         handle-click (fn [index]
-                       (let [secs      (int (quot index rows))
-                             obs-index (int (mod index rows))
+                       (let [secs      (int (quot index nrows))
+                             obs-index (int (mod index nrows))
                              obs-key   (get @labels obs-index)
                              obs-val   (get-in @observations [secs obs-key])]
-                         (js/console.log obs-key "" obs-val)))
+                         (jump-fn secs)
+                         (js/console.log secs)))
         ;; layout attrs
         cell-size    16
         padding      2
-        height       (* (+ padding cell-size) (inc rows))]
+        height       (* (+ padding cell-size) (inc nrows))]
 
     [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
      ;; labels
@@ -133,9 +135,9 @@
       [:div {:id "heatmap-viewport" :style {"overflow" "auto" "height" "100%"}}
        [:svg {:width (str (* cell-size cols) "px") :class "heatmap"}
         (doall
-          (for [index (range (* rows cols))]
-            (let [x (* (quot index rows) (+ cell-size padding))
-                  y (* (mod index rows) (+ cell-size padding))]
+          (for [index (range (* nrows cols))]
+            (let [x (* (quot index nrows) (+ cell-size padding))
+                  y (* (mod index nrows) (+ cell-size padding))]
               [:rect {:key     index
                       :x       x :y y
                       :width   cell-size :height cell-size
@@ -203,4 +205,6 @@
 
          [:div
           [annotations-slider video video-time]
-          [annotations-map video template]]]))))
+          [annotations-map video template #(do (reset! video-time %)
+                                               (.pause @!video-player)
+                                               (.seek @!video-player %))]]]))))

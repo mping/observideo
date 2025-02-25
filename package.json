@@ -99,6 +99,7 @@
   },
   "dependencies": {
     "antd": "4.16.6",
+    "chroma-js": "^3.1.2",
     "create-react-class": "^15.6.2",
     "electron-dl": "^3.0.0",
     "fast-glob": "^3.2.2",
