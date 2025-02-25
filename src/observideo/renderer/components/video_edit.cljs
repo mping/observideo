@@ -105,8 +105,13 @@
                        (let [obs     (index->obs index)
                              filled? (-> (filter identity (vals obs))
                                          (count))]
-                         (when (pos-int? filled?)
-                           (js/console.log filled? (get colors filled?)))
+                         (if (>= filled? ncolors)
+                           (last colors)
+                           (get colors filled?))))
+        color-cell   (fn [row col]
+                       (let [obs     (get-in @observations [col])
+                             filled? (-> (filter identity (vals obs))
+                                         (count))]
                          (if (>= filled? ncolors)
                            (last colors)
                            (get colors filled?))))
@@ -115,13 +120,37 @@
                              obs-index (int (mod index nrows))
                              obs-key   (get @labels obs-index)
                              obs-val   (get-in @observations [secs obs-key])]
-                         (jump-fn secs)
-                         (js/console.log secs)))
+                         (jump-fn secs)))
+        handle-click (fn [row col]
+                       (let [obs-key   (get @labels row)
+                             obs-val   (get-in @observations [col obs-key])]
+                         (js/console.log obs-key obs-val)
+                         (jump-fn col)))
         ;; layout attrs
         cell-size    16
         padding      2
         height       (* (+ padding cell-size) (inc nrows))]
 
+    [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+     [:div {:id "heatmap-viewport" :style {"overflow" "auto"
+                                           "height"   "100%"
+                                           "width"    "100%"}}
+      [:table {:class "heatmap"}
+       [:tbody
+        (doall (for [row (range nrows)]
+                 [:tr
+                  [:td (get @labels row)]
+                  (doall (for [col (range cols)
+                               :let [index (+ (* row nrows) col)]]
+                           [:td {:key     index
+                                 :onClick #(handle-click row col)
+                                 :style   {"background" (color-cell row col)
+                                           "min-width"  "25px"
+                                           "min-height" "25px"
+                                           "border"     "1px solid #ccc"}}
+                            ""]))]))]]]]
+
+    #_
     [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
      ;; labels
      [antd/col {:span 2 :style {"height" (str height "px")}}
