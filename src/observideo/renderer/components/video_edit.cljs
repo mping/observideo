@@ -84,7 +84,7 @@
                     :max      (int (:duration @video))
                     :onChange #(do
                                  (seek-video %)
-                                 (update-scroll-left "heatmap-viewport" %))}])]])
+                                 (update-scroll-left "heatmap-viewport" (/ (* 100 %) (int (:duration @video)))))}])]])
 
 (defn pos->obs-val [video labels row col]
   (let [obs-key (get labels row)
