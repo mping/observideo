@@ -59,19 +59,18 @@
                             :style   {:color      ""
                                       :background (cond
                                                     attribute-on? "#1890ff")}
-                            :onClick #(do
-                                        (if attribute-on?
-                                          (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                        (dissoc @observation header) @video-time])
-                                          (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                        (assoc @observation header attribute) @video-time])))}
+                            :onClick #(if attribute-on?
+                                        (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                      (assoc @observation header nil) @video-time])
+                                        (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                      (assoc @observation header attribute) @video-time]))}
                        attribute]]))]]]))]]]]]]))
 
 ;;;;
 ;; table
 ;;
 
-(defn- annotations-slider [video video-time]
+(defn- annotations-slider [video seek-video video-time]
   [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
    [antd/col {:span 2}]
    [antd/col {:span 22}
@@ -84,52 +83,18 @@
       [antd/slider {:value    @video-time
                     :max      (int (:duration @video))
                     :onChange #(do
-                                 (reset! video-time %)
+                                 (seek-video %)
                                  (update-scroll-left "heatmap-viewport" %))}])]])
 
-(defn- annotations-map [video template jump-fn]
-  (let [observations (reaction
-                       (get-in @video [:observations]))
-        labels       (reaction
-                       (mapv first (:attributes @template)))
-        nrows        (count @labels)
-        cols         (int (:duration @video))
+(defn pos->obs-val [video labels row col]
+  (let [obs-key (get labels row)
+        obs-val (get-in @video [:observations col obs-key])]
+    obs-val))
 
-        ;; ui attrs
-        colors       (cjs/scale nrows)
-        ncolors      (count colors)
-        index->obs   (fn [index]
-                       (let [secs (int (quot index nrows))]
-                         (get-in @observations [secs])))
-        color-cell   (fn [index]
-                       (let [obs     (index->obs index)
-                             filled? (-> (filter identity (vals obs))
-                                         (count))]
-                         (if (>= filled? ncolors)
-                           (last colors)
-                           (get colors filled?))))
-        color-cell   (fn [row col]
-                       (let [obs     (get-in @observations [col])
-                             filled? (-> (filter identity (vals obs))
-                                         (count))]
-                         (if (>= filled? ncolors)
-                           (last colors)
-                           (get colors filled?))))
-        handle-click (fn [index]
-                       (let [secs      (int (quot index nrows))
-                             obs-index (int (mod index nrows))
-                             obs-key   (get @labels obs-index)
-                             obs-val   (get-in @observations [secs obs-key])]
-                         (jump-fn secs)))
-        handle-click (fn [row col]
-                       (let [obs-key   (get @labels row)
-                             obs-val   (get-in @observations [col obs-key])]
-                         (js/console.log obs-key obs-val)
-                         (jump-fn col)))
-        ;; layout attrs
-        cell-size    16
-        padding      2
-        height       (* (+ padding cell-size) (inc nrows))]
+(defn- annotations-map [video template seek-video video-time]
+  (let [labels       (mapv first (:attributes @template))
+        nrows        (count labels)
+        cols         (int (:duration @video))]
 
     [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
      [:div {:id "heatmap-viewport" :style {"overflow" "auto"
@@ -138,40 +103,19 @@
       [:table {:class "heatmap"}
        [:tbody
         (doall (for [row (range nrows)]
-                 [:tr
-                  [:td (get @labels row)]
+                 [:tr {:key (str "tr" row)}
+                  [:td {:key (str "title" row)} (get labels row)]
                   (doall (for [col (range cols)
-                               :let [index (+ (* row nrows) col)]]
-                           [:td {:key     index
-                                 :onClick #(handle-click row col)
-                                 :style   {"background" (color-cell row col)
+                               :let [index (+ (* row nrows) col)
+                                     cell  (r/track pos->obs-val video labels row col)]]
+                           [:td {:key     (str "td"index)
+                                 :onClick #(seek-video col)
+                                 :style   {"background" "ddd"
                                            "min-width"  "25px"
                                            "min-height" "25px"
                                            "border"     "1px solid #ccc"}}
-                            ""]))]))]]]]
-
-    #_
-    [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
-     ;; labels
-     [antd/col {:span 2 :style {"height" (str height "px")}}
-      [:svg {:class "heatmap" :style {"width" "100%"}}
-       (doall
-         (for [[i day] (map-indexed vector @labels)]
-           [:text {:key       (str "label-" i) :x 0 :y (+ (* i (+ cell-size padding)) 10)
-                   :font-size 10 :fill "#000" :text-anchor "start"} day]))]]
-     ;; heatmap
-     [antd/col {:span 22 :style {"height" (str height "px")}}
-      [:div {:id "heatmap-viewport" :style {"overflow" "auto" "height" "100%"}}
-       [:svg {:width (str (* cell-size cols) "px") :class "heatmap"}
-        (doall
-          (for [index (range (* nrows cols))]
-            (let [x (* (quot index nrows) (+ cell-size padding))
-                  y (* (mod index nrows) (+ cell-size padding))]
-              [:rect {:key     index
-                      :x       x :y y
-                      :width   cell-size :height cell-size
-                      :fill    (color-cell index)
-                      :onClick #(handle-click index)}])))]]]]))
+                            [:span {:style {"font-size" "xx-small"}}
+                             @cell]]))]))]]]]))
 
 (defn root []
   (let [templates     (vals @(rf/subscribe [:templates/all]))
@@ -183,7 +127,11 @@
         ;; these are "local component state"
         ;; some can be used to re-trigger a render (r/atom)
         ;; others are just vars (clojure.core/atom)
-        !video-player (atom nil)]
+        !video-player (atom nil)
+        seek-video    (fn [secs]
+                        (reset! video-time secs)
+                        (.pause @!video-player)
+                        (.seek @!video-player secs))]
 
     ;; form-2 component
     (fn []
@@ -233,7 +181,5 @@
             [observation-table video-time]]]]
 
          [:div
-          [annotations-slider video video-time]
-          [annotations-map video template #(do (reset! video-time %)
-                                               (.pause @!video-player)
-                                               (.seek @!video-player %))]]]))))
+          [annotations-slider video seek-video video-time]
+          [annotations-map video template seek-video video-time]]]))))
