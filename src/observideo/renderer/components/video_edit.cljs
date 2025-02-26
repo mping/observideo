@@ -86,7 +86,7 @@
                                  (seek-video %)
                                  (update-scroll-left "heatmap-viewport" (/ (* 100 %) (int (:duration @video)))))}])]])
 
-(defn pos->obs-val [video labels row col]
+(defn- pos->obs-val [video labels row col]
   (let [obs-key (get labels row)
         obs-val (get-in @video [:observations col obs-key])]
     obs-val))
@@ -96,11 +96,18 @@
         nrows        (count labels)
         cols         (int (:duration @video))]
 
-    [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
+    [antd/row {:gutter [1 1] :style {}}
      [:div {:id "heatmap-viewport" :style {"overflow" "auto"
                                            "height"   "100%"
                                            "width"    "100%"}}
       [:table {:class "heatmap"}
+       [:thead
+        [:tr
+         [:td]
+         (doall (for [col (range (dec cols))]
+                  [:td (when (zero? (mod col 5))
+                         [:small (str col "s")])]))]]
+
        [:tbody
         (doall (for [row (range nrows)]
                  [:tr {:key (str "tr" row)}
@@ -113,7 +120,7 @@
                                  :style   {"background" "ddd"
                                            "min-width"  "25px"
                                            "min-height" "25px"
-                                           "border"     "1px solid #ccc"}}
+                                           "border"     "1px dashed #eee"}}
                             [:span {:style {"font-size" "xx-small"}}
                              @cell]]))]))]]]]))
 
