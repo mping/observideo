@@ -12,12 +12,26 @@
   (let [new-template (assoc template :name newname)]
     (rf/dispatch [:ui/update-current-template new-template])))
 
+(defn- update-template-interval [template intv]
+  (let [new-template (assoc template :interval intv)]
+    (rf/dispatch [:ui/update-current-template new-template])))
+
+(defn- update-template-type [template ttype]
+  (let [intv         (:interval template)
+        new-template (assoc template :type (keyword ttype)
+                                     :interval (or intv 1))]
+    (rf/dispatch [:ui/update-current-template new-template])))
+
 ;; cols
 (defn- add-template-col [e template]
   (.preventDefault e)
   (let [attrname     (str (gensym))
         attrs        (:attributes template)
-        new-template (update-in template [:attributes] assoc attrname {:index (count attrs) :values ["Some" "Values"]})]
+        next-index   (:next-index template)
+        new-template (update-in template [:attributes]
+                                assoc
+                                attrname {:index (count attrs) :values ["Some" "Values"]}
+                                :next-index (inc next-index))]
     (rf/dispatch [:ui/update-current-template new-template])))
 
 (defn- delete-template-col [e template name]
@@ -68,6 +82,8 @@
   (let [template     (rf/subscribe [:templates/current])
         this         (r/current-component)
         tmpl-name    (:name @template)
+        intv         (or (:interval @template) 1)
+        ttype        (or (:type @template) :interval)
         attributes   (:attributes @template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
     [:div
@@ -83,6 +99,22 @@
       [antd/form-item {:label "Template Name" #_#_:rules [{:required true :message "Field is required"}]}
        [antd/input {:value    tmpl-name
                     :onChange #(update-template-name @template (-> % .-target .-value))}]]
+
+      [antd/form-item {:label (str "Type : ")}
+       [antd/select {:value ttype
+                     :options [{:value :interval :label "Interval"}
+                               {:value :freeform :label "Freeform"}]
+                     :onChange #(update-template-type @template %)}]]
+
+      [antd/form-item {:label (str "Interval (secs): " intv)}
+       [antd/slider {:min            1
+                     :max            60
+                     :value          intv
+                     :key            "slider"
+                     :tooltipVisible false
+                     :disabled       (= ttype :freeform)
+                     :onChange       #(update-template-interval @template %)}]]
+
 
       ;; dynamic fields
       [:table {:style {:width "100%"}}
@@ -161,6 +193,10 @@
   (let [clj-record (js->clj record :keywordize-keys true)]
     (str/join ", " (map name (keys (:attributes clj-record))))))
 
+(defn- render-type [_ record]
+  (let [clj-record (js->clj record :keywordize-keys true)]
+    (or (:type clj-record) "<undefined>")))
+
 (defn- render-video-count [freqs _ record]
   (let [clj-record  (js->clj record :keywordize-keys true)
         template-id (:id clj-record)]
@@ -187,7 +223,8 @@
                   :pagination {:position "top"}
                   :title      (constantly "Templates")}
       [antd/column {:title "Name" :dataIndex :name :render render-name}]
-      [antd/column {:title "# Videos" :render (partial render-video-count @videos-per-template)}]
+      [antd/column {:title "# Videos" :render (partial render-video-count videos-per-template)}]
+      [antd/column {:title "Type" :render render-type}]
       [antd/column {:title "Attributes" :render render-attributes}]
       [antd/column {:title "Actions" :render render-actions}]]
 

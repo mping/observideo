@@ -97,7 +97,12 @@
   (fn [db [_ id]]
     (let [current-video      (:videos/current db)
           template           (get-in db [:templates/all id])
-          total-observations (int (:duration current-video))
+          template-type      (:type template)
+          total-observations (cond
+                               (= :interval template-type) (Math/ceil (/ (int (:duration current-video))
+                                                                         (:interval template)))
+                               (= :freeform template-type) (int (:duration current-video))
+                               :else  (throw (ex-info "Unknown template type" template)))
           new-observations   (mapv #(make-empty-observation template) (range total-observations))
           updated-video      (assoc current-video :template-id id
                                                   :observations new-observations)

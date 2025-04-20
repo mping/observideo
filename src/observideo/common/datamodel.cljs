@@ -7,6 +7,7 @@
 
 (def demo-template {:id         "fb52dd46-85cc-4864-b11e-44b8a5b28331"
                     :name       "Demo"
+                    :type       :freeform
                     :attributes {"Peer"   {:index 0 :values ["Alone" "Adults" "Peers" "Adults and Peers" "N/A"]}
                                  "Gender" {:index 1 :values ["Same" "Opposite" "Both" "N/A"]}
                                  "Type"   {:index 2 :values ["Roleplay" "Rough and Tumble" "Exercise"]}}})

@@ -69,8 +69,23 @@
 ;;;;
 ;; table
 ;;
+(defn- annotations-slider-interval [template video seek-video video-time]
+  (let [duration (:duration @video)
+        interval (:interval @template)
+        max-val  (Math/ceil (/ duration interval))
+        position (Math/floor (/ duration @video-time))]
 
-(defn- annotations-slider [video seek-video video-time]
+    [antd/slider {:min            0
+                  :max            max-val
+                  :value          position
+                  :tooltipVisible false
+                  :dots           true
+                  :onChange       #(do ;(reset! video-section %)
+                                       (seek-video (* % interval))
+                                       #_
+                                       (.pause @!video-player))}]))
+
+(defn- annotations-slider [template video seek-video video-time]
   [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
    [antd/col {:span 2}]
    [antd/col {:span 22}
@@ -143,7 +158,12 @@
     ;; form-2 component
     (fn []
       ;; trigger re-render when some attr on the video changes
-      (let [selected-template (rf/subscribe [:videos/current-template])]
+      (let [selected-template (rf/subscribe [:videos/current-template])
+            template-type     (:type @selected-template)]
+
+        ;; trigger an update in case we changed template duration
+        ;; we need to recalc observations
+        (select-template video (:id @selected-template))
 
         [:div
          [antd/row {:gutter [8, 8]}
@@ -169,7 +189,7 @@
           ;;;;
           ;; right col - template application
           [antd/col {:span 12}
-           [antd/page-header {:title "Template"}]
+           [antd/page-header {:title (str (utils/fname @filename) " (" (int (:duration @video)) "s)")}]
 
            [:div
             [antd/select {:defaultValue (:id @selected-template)
@@ -177,8 +197,12 @@
                           :onChange     #(select-template video %)}
              (doall
                (for [tmpl templates
-                     :let [{:keys [id name]} tmpl]]
-                 [antd/option {:key id} (str name)]))]
+                     :let [{:keys [id name]} tmpl
+                           ttype (:type tmpl)
+                           tintv (:interval tmpl)]]
+                 [antd/option {:key id} (str name (if (= :interval ttype)
+                                                    (str " (" tintv "s)")
+                                                    " (freeform)"))]))]
 
             [:br]]
 
@@ -188,5 +212,9 @@
             [observation-table video-time]]]]
 
          [:div
-          [annotations-slider video seek-video video-time]
-          [annotations-map video template seek-video video-time]]]))))
+          (if (= :interval template-type)
+            [annotations-slider-interval template video seek-video video-time]
+            [annotations-slider template video seek-video video-time])
+          
+          (if (= :freeform template-type)
+            [annotations-map video template seek-video video-time])]]))))
