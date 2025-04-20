@@ -124,11 +124,13 @@
 (rf/reg-event-db
   :ui/update-current-video-current-section-observation
   [interceptors/queue-save-db]
-  (fn [db [_ observation time]]
+  (fn [db [_ observation position]]
     (let [current-video     (:videos/current db)
-          observation-index (int time)
+          observation-index (int position)
           updated-video     (assoc-in current-video [:observations observation-index] observation)
           fullpath          (:filename updated-video)]
+      (js/console.log observation-index)
+      (js/console.log (clj->js observation))
       (-> db
           (assoc-in [:videos/current] updated-video)
           (assoc-in [:videos/all fullpath] updated-video)))))

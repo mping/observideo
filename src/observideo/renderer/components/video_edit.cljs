@@ -16,12 +16,21 @@
 
 (defn- observation-table [video-time]
   (let [template     (rf/subscribe [:videos/current-template])
+        interval?    (= :interval (:type @template))
         video        (rf/subscribe [:videos/current])
+        observ-idx   (reaction
+                       (if interval?
+                         (int (/ (max 0 (dec (int @video-time))) (:interval @template)))
+                         (int @video-time)))
+        position     (reaction
+                       (if interval?
+                         (int (/ (int @video-time) (:interval @template)))
+                         (int @video-time)))
         observation  (reaction
-                       (get-in @video [:observations (int @video-time)]))
+                       (get-in @video [:observations @observ-idx]))
+        section0?    (and interval? (zero? @position))
         attributes   (:attributes @template)
         sorted-attrs (sort-by (fn [[_ v]] (:index v)) attributes)]
-
 
     [:div.ant-table.ant-table-middle
      [:div.ant-table-container
@@ -56,14 +65,16 @@
 
                      [:tr {:key rowkey}
                       [:td {:key     tdkey
-                            :style   {:color      ""
+                            :style   {:color      (when section0? "#eee")
                                       :background (cond
+                                                    section0? "#fff"
                                                     attribute-on? "#1890ff")}
-                            :onClick #(if attribute-on?
-                                        (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                      (assoc @observation header nil) @video-time])
-                                        (rf/dispatch [:ui/update-current-video-current-section-observation
-                                                      (assoc @observation header attribute) @video-time]))}
+                            :onClick #(do
+                                        (if attribute-on?
+                                          (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                        (assoc @observation header nil) @observ-idx])
+                                          (rf/dispatch [:ui/update-current-video-current-section-observation
+                                                        (assoc @observation header attribute) @observ-idx])))}
                        attribute]]))]]]))]]]]]]))
 
 ;;;;
@@ -73,7 +84,7 @@
   (let [duration (:duration @video)
         interval (:interval @template)
         max-val  (Math/ceil (/ duration interval))
-        position (Math/floor (/ duration @video-time))]
+        position (Math/floor (/ @video-time interval))]
 
     [antd/slider {:min            0
                   :max            max-val
@@ -85,7 +96,7 @@
                                        #_
                                        (.pause @!video-player))}]))
 
-(defn- annotations-slider [template video seek-video video-time]
+(defn- annotations-slider [video seek-video video-time]
   [antd/row {:gutter [1 1] :style {:padding-top "1rem"}}
    [antd/col {:span 2}]
    [antd/col {:span 22}
@@ -163,7 +174,7 @@
 
         ;; trigger an update in case we changed template duration
         ;; we need to recalc observations
-        (select-template video (:id @selected-template))
+        ;; (select-template video (:id @selected-template))
 
         [:div
          [antd/row {:gutter [8, 8]}
@@ -194,6 +205,7 @@
            [:div
             [antd/select {:defaultValue (:id @selected-template)
                           :placeholder  "Select a template"
+                          :key          (:id selected-template)
                           :onChange     #(select-template video %)}
              (doall
                (for [tmpl templates
@@ -214,7 +226,7 @@
          [:div
           (if (= :interval template-type)
             [annotations-slider-interval template video seek-video video-time]
-            [annotations-slider template video seek-video video-time])
+            [annotations-slider video seek-video video-time])
           
           (if (= :freeform template-type)
             [annotations-map video template seek-video video-time])]]))))
