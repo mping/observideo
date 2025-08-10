@@ -6,15 +6,45 @@
             [taoensso.timbre :as log]))
 
 (def demo-template {:id         "fb52dd46-85cc-4864-b11e-44b8a5b28331"
-                    :name       "Demo"
+                    :name       "Observação BLP"
                     :interval   15
                     :next-index 3                           ;;monotonic counter to ensure old indexes preserve their value
-                    :attributes {"Peer"   {:index 0 :values ["Alone" "Adults" "Peers" "Adults and Peers" "N/A"]}
-                                 "Gender" {:index 1 :values ["Same" "Opposite" "Both" "N/A"]}
-                                 "Type"   {:index 2 :values ["Roleplay" "Rough and Tumble" "Exercise"]}}})
+                    :attributes {"Comportamento" {:index 0 :values ["Lutas (murros, pontapés, deitar ao chão, empurrar, ...)"
+                                                                    "Lutas com componente simbólica (super heróis, bons e maus, ...)"
+                                                                    "Perseguição"
+                                                                    "Cócegas"
+                                                                    "Outra"
+                                                                    "N/A"]}
+                                 "Afetividade"   {:index 1 :values ["Negativa"
+                                                                    "Positiva"
+                                                                    "Neutra"
+                                                                    "N/A"]}
+                                 "Interação"     {:index 2 :values ["Unilateral"
+                                                                    "Recíproca"
+                                                                    "Outra"
+                                                                    "N/A"]}
+                                 "Contacto"      {:index 3 :values ["Sem contacto"
+                                                                    "Com contacto"
+                                                                    "N/A"]}
+                                 "Força"         {:index 4 :values ["Pouca força"
+                                                                    "Força indiferenciada"
+                                                                    "Muita força"
+                                                                    "N/A"]}
+                                 "Movimentos"    {:index 5 :values ["Diretos"
+                                                                    "Curvilíneos"
+                                                                    "Outros"
+                                                                    "N/A"]}
+                                 "Pares"         {:index 6 :values ["1"
+                                                                    "2"
+                                                                    "3 ou mais"
+                                                                    "N/A"]}
+                                 "Género"        {:index 7 :values ["Mesmo"
+                                                                    "Oposto"
+                                                                    "Misto"
+                                                                    "N/A"]}}})
 
-
-(def demo-video {:filename        "/home/mping/Download … deo_720x480_30mb.mp4"
+;; reference only
+(def demo-video {:filename        "/home/mping/Download/"
                  :duration        183.318
                  :info            {:a "changeme"}
                  :md5sum          "changeme"
@@ -98,18 +128,18 @@
 
 (defn- errors [filename template observation]
   (->> observation
-    (map-indexed (fn [i [attr val]]
-                   (let [values (get-in template [attr :values] [])
-                         idx    (.indexOf values val)]
-                     (when (and (some? val) (< idx 0))
-                       (let [message (gstr/format "An issue occured with video '%s'" filename)
-                             descr   (gstr/format "Observation number %s: Failed to find index for attribute '%s' with value '%s'"
-                                       (inc i) attr val filename)]
-                         (log/warnf "'%s': Failed to find index for attr '%s' value '%s'" filename attr val)
-                         {:message     message
-                          :description descr})))))
-    (filter identity)
-    (flatten)))
+       (map-indexed (fn [i [attr val]]
+                      (let [values (get-in template [attr :values] [])
+                            idx    (.indexOf values val)]
+                        (when (and (some? val) (< idx 0))
+                          (let [message (gstr/format "An issue occured with video '%s'" filename)
+                                descr   (gstr/format "Observation number %s: Failed to find index for attribute '%s' with value '%s'"
+                                                        (inc i) attr val filename)]
+                            (log/warnf "'%s': Failed to find index for attr '%s' value '%s'" filename attr val)
+                            {:message     message
+                             :description descr})))))
+       (filter identity)
+       (flatten)))
 
 
 (defn- observation->index0
@@ -122,15 +152,15 @@
             ;; "xxx"    -> index
             ;; notfound -> -1
             (or (and val idx)
-              nil)))
-    observation))
+                nil)))
+        observation))
 
 
 (defn observation->index1
   "1-based version ov observation->index0, keeping -1 for not found"
   [template observation]
   (mapv #(if (>= % 0) (inc %) %)
-    (observation->index0 template observation)))
+        (observation->index0 template observation)))
 
 
 (defn- video->csv
