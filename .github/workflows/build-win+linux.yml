@@ -75,6 +75,7 @@ jobs:
         uses: johannesjo/action-electron-builder@v1
         env:
           GH_TOKEN: ${{ secrets.github_token }}
+          EP_GH_IGNORE_TIME: true
         with:
           # GitHub token, automatically provided to the action
           # (No need to define this secret in the repo settings)
