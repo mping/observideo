@@ -7,6 +7,13 @@ Video annotation software: define a template, load your videos and then and anno
 
 screenshot.png![image](https://user-images.githubusercontent.com/88425/226198981-b54abd57-3456-46bf-ba51-938bcd44c08c.png)
 
+### macOS
+
+On macOS, you might need to un-quarantine the `.dmg` file:
+
+```shell
+xattr -d com.apple.quarantine observideo-0.2.5-arm64.dmg
+```
 
 ## Who
 
