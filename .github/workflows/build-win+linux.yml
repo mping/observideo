@@ -56,6 +56,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      - name: Shadow-cljs compile
+        run: |
+          npx shadow-cljs release main
+          npx shadow-cljs release renderer
 
       - uses: actions/setup-java@v3
         with:
