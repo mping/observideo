@@ -86,6 +86,7 @@ jobs:
         uses: johannesjo/action-electron-builder@v1
         env:
           GH_TOKEN: ${{ secrets.github_token }}
+          GITHUB_RELEASE_TOKEN: ${{ secrets.github_token }}
         with:
           # GitHub token, automatically provided to the action
           # (No need to define this secret in the repo settings)
