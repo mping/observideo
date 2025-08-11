@@ -3,8 +3,14 @@ name: Build/release-mac
 on:
   workflow_dispatch:
   push:
+    branches:
+      - gh-updates
     tags:
       - v**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   release:
