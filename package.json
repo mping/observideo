@@ -43,10 +43,7 @@
       "category": "public.app-category.education",
       "extraResources": [
         {
-          "from": "node_modules/ffprobe-static/ffprobe/bin/darwin/x64/ffprobe"
-        },
-        {
-          "from": "node_modules/ffprobe-static/ffprobe/bin/darwin/arm64/ffprobe"
+          "from": "node_modules/ffprobe-static/bin/darwin/${arch}/ffprobe"
         }
       ]
     },
