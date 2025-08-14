@@ -107,6 +107,6 @@
              :submitURL "https://observideo.com/submit-url"
              :autoSubmit false}))
 
-  (.on app "window-all-closed" #(when-not (= js/process.platform "darwin")
-                                  (.quit app)))
+  ;(.on app "window-all-closed" #(when-not (= js/process.platform "darwin") (.quit app)))
+  (.on app "window-all-closed" #(.quit app))
   (.on app "ready" init))
