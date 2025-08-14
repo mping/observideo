@@ -1,7 +1,7 @@
 {
   "name": "observideo",
   "homepage": "https://observideo.com",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "Observideo is an app for categorizing video segments",
   "license": "MIT",
   "main": "resources/main.js",
@@ -36,7 +36,7 @@
       "target": {
         "target": "default",
         "arch": [
-          "arm64", 
+          "arm64",
           "x64"
         ]
       },
