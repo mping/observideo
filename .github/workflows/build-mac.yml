@@ -85,12 +85,15 @@ jobs:
           path: dist/*.dmg
 
       - name: Build/release Electron app
+        #todo: https://github.com/samuelmeuli/action-electron-builder
         #uses: johannesjo/action-electron-builder@v1
         uses: samuelmeuli/action-electron-builder@v1
         env:
           GH_TOKEN: ${{ secrets.github_token }}
           EP_GH_IGNORE_TIME: true
         with:
+          mac_certs: ${{ secrets.mac_certs }}
+          mac_certs_password: ${{ secrets.mac_certs_password }}
           # GitHub token, automatically provided to the action
           # (No need to define this secret in the repo settings)
           github_token: ${{ secrets.github_token }}
