@@ -1,0 +1,36 @@
+name: observideo
+description: Native Flutter desktop port of Observideo.
+publish_to: none
+version: 0.4.0+1
+
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  archive: 4.3.0
+  crypto: 3.0.7
+  ffi: 2.1.4
+  file_selector: 1.1.0
+  media_kit: 1.2.6
+  media_kit_video: 2.0.1
+  path: 1.9.1
+  path_provider: 2.1.5
+  media_kit_libs_macos_video:
+    path: vendor/media_kit_libs_macos_video
+  media_kit_libs_windows_video:
+    path: vendor/media_kit_libs_windows_video
+  media_kit_libs_linux:
+    path: vendor/media_kit_libs_linux
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+

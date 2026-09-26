@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.14)
+set(PROJECT_NAME "media_kit_libs_windows_video")
+project(${PROJECT_NAME} LANGUAGES CXX)
+
+option(MEDIA_KIT_LIBS_AVAILABLE "package:media_kit controlled libraries are available" ON)
+if(NOT DEFINED ENV{OBSERVIDEO_MEDIA_ROOT})
+  message(FATAL_ERROR "OBSERVIDEO_MEDIA_ROOT must point at the controlled Windows media build")
+endif()
+file(TO_CMAKE_PATH "$ENV{OBSERVIDEO_MEDIA_ROOT}" MEDIA_ROOT)
+if(NOT EXISTS "${MEDIA_ROOT}/bin/libmpv-2.dll")
+  message(FATAL_ERROR "Controlled libmpv is missing from ${MEDIA_ROOT}/bin")
+endif()
+if(NOT EXISTS "${MEDIA_ROOT}/lib/libmpv.dll.a")
+  message(FATAL_ERROR "Controlled libmpv import library is missing from ${MEDIA_ROOT}/lib")
+endif()
+if(NOT EXISTS "${MEDIA_ROOT}/angle/lib/libEGL.dll.lib")
+  message(FATAL_ERROR "Controlled ANGLE import libraries are missing from ${MEDIA_ROOT}/angle")
+endif()
+
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/libmpv")
+file(COPY "${MEDIA_ROOT}/include/" DESTINATION "${CMAKE_BINARY_DIR}/libmpv/include")
+file(COPY "${MEDIA_ROOT}/lib/libmpv.dll.a" DESTINATION "${CMAKE_BINARY_DIR}/libmpv")
+file(COPY "${MEDIA_ROOT}/angle/" DESTINATION "${CMAKE_BINARY_DIR}/ANGLE")
+
+set(PLUGIN_NAME "media_kit_libs_windows_video_plugin")
+add_library(${PLUGIN_NAME} SHARED
+  "media_kit_libs_windows_video_plugin_c_api.cpp"
+  "include/media_kit_libs_windows_video/media_kit_libs_windows_video_plugin_c_api.h")
+apply_standard_settings(${PLUGIN_NAME})
+set_target_properties(${PLUGIN_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
+target_include_directories(${PLUGIN_NAME} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
+
+file(GLOB CONTROLLED_DLLS "${MEDIA_ROOT}/bin/*.dll")
+set(media_kit_libs_windows_video_bundled_libraries ${CONTROLLED_DLLS} PARENT_SCOPE)

@@ -1,5 +1,6 @@
 .shadow-cljs/
 node_modules/
+.cpcache/
 
 resources/public/js
 resources/main.js
@@ -8,3 +9,9 @@ target/
 tags
 dist/
 .nrepl-port
+
+# local OS and IDE artifacts
+.DS_Store
+.idea/
+*.iml
+.vscode/

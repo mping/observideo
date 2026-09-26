@@ -180,14 +180,34 @@
         template-id (:id clj-record)]
     (get freqs template-id 0)))
 
-(defn- render-actions [_ record]
+(defn- delete-template!
+  "Deleting a template used to always wipe every template
+   (:ui/delete-template's own `(dissoc db :templates/all id)` bug); now
+   that it correctly removes just this one, a video's :template-id could
+   still end up pointing nowhere if the template it uses gets deleted. So
+   block it here, with a visible reason, rather than leave that to the
+   defensive (and otherwise silent) backstop in the event handler itself."
+  [videos-per-template record]
+  (let [clj-record (js->clj record :keywordize-keys true)
+        id         (:id clj-record)
+        in-use     (get videos-per-template id 0)]
+    (if (pos? in-use)
+      (antd/notify-warning
+        #js {:message     "Cannot delete template"
+             :description (str "This template is used by " in-use
+                             (if (= 1 in-use) " video." " videos.")
+                             " Change their template first, then delete this one.")
+             :placement   "topRight"})
+      (rf/dispatch [:ui/delete-template clj-record]))))
+
+(defn- render-actions [videos-per-template _ record]
   (r/as-element
     [:div
      [antd/button {:type    "primary" :size "small"
                    :onClick #(rf/dispatch [:ui/edit-template (js->clj record :keywordize-keys true)])}
       [antd/edit-icon] " edit"]
      [antd/button {:type    "danger" :size "small"
-                   :onClick #(rf/dispatch [:ui/delete-template (js->clj record :keywordize-keys true)])}
+                   :onClick #(delete-template! videos-per-template record)}
       [antd/delete-icon] " delete"]]))
 
 (defn- templates-table []
@@ -203,7 +223,7 @@
       [antd/column {:title "Name" :dataIndex :name :render render-name}]
       [antd/column {:title "# Videos" :render (partial render-video-count videos-per-template)}]
       [antd/column {:title "Attributes" :render render-attributes}]
-      [antd/column {:title "Actions" :render render-actions}]]
+      [antd/column {:title "Actions" :render (partial render-actions videos-per-template)}]]
 
      [antd/button {:type    "primary" :size "small"
                    :onClick #(rf/dispatch [:ui/add-template nil])}

@@ -57,13 +57,19 @@
         resetted (reset-view data)
         wrapped  (wrap resetted)
         valid?   (s/valid? datamodel/db-spec resetted)]
-    (when-not valid?
-      (log/warn "Updating with invalid data")
-      (s/explain datamodel/db-spec resetted))
-    ;; lame, should be async
-    (let [res (fs/writeFileSync db-file (t/write writer wrapped))]
-      (log/infof "Finished updating db at %s" db-file)
-      res)))
+    (if-not valid?
+      ;; Refuse to persist invalid data -- writing it anyway just means the
+      ;; NEXT read-db (e.g. on the next launch) loads a state that already
+      ;; failed its own spec, and every consumer downstream (CSV export,
+      ;; queries, ...) has to cope with it. Leaving the last good save in
+      ;; place is safer than overwriting it with something known-bad.
+      (do
+        (log/warn "Refusing to persist invalid db data; keeping the previous save")
+        (s/explain datamodel/db-spec resetted))
+      ;; lame, should be async
+      (let [res (fs/writeFileSync db-file (t/write writer wrapped))]
+        (log/infof "Finished updating db at %s" db-file)
+        res))))
 
 
 ;; debounced version
@@ -104,8 +110,8 @@
                                  (= by :index1) by-index1
                                  (= by :index0) by-index0)
 
-                  ;; join cells, then lines
-                  csvdatum (map #(string/join "," %) datum)
+                  ;; join cells, then lines (escaped -- see csv-line)
+                  csvdatum (map datamodel/csv-line datum)
                   csvdatum (string/join "\n" csvdatum)
 
                   basedir  (:videos/folder db)
@@ -152,7 +158,7 @@
   [rows]
   (let [archive  (normalize-path (str (.getPath app "temp") "/observideo-query.csv"))
         csv-data (->> rows
-                   (mapv (fn [r] (str/join "," r)))
+                   (mapv datamodel/csv-line)
                    (str/join "\n"))]
 
     (p/create

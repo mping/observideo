@@ -15,6 +15,22 @@
 (defn- select-template [video id]
   (rf/dispatch [:ui/update-current-video-template (str id)]))
 
+;; How close (in seconds) the reported currentTime needs to be to the
+;; video's actual duration to count as "reached the end" -- the player and
+;; ffprobe's durations are both floats and essentially never compare equal
+;; exactly, so the previous `(= secs duration)` check could only reach the
+;; last section by coincidence.
+(def ^:private duration-epsilon-s 0.05)
+
+;; How long (ms) to keep trusting an explicit seek's target section over
+;; whatever section the player's own currentTime would otherwise imply.
+;; Right after a seek, the player can report a currentTime a hair below
+;; the target for a tick or two (e.g. landing on the nearest keyframe),
+;; which floor(t / interval) reads as the PREVIOUS section. Since the user
+;; just explicitly chose a section, that choice should win until either
+;; the player catches up or this timeout elapses.
+(def ^:private seek-settle-timeout-ms 500)
+
 
 (defn- observation-table []
   (let [template     @(rf/subscribe [:videos/current-template])
@@ -78,7 +94,12 @@
         !video-player  (atom nil)
         !step-interval (atom 1)
         video-section  (r/atom 0)
-        video-time     (r/atom 0)]
+        video-time     (r/atom 0)
+        ;; set by the slider's onChange, cleared once the player's
+        ;; currentTime settles on (or times out waiting for) that target --
+        ;; see seek-settle-timeout-ms.
+        !seek-target-section (atom nil)
+        !seek-requested-at   (atom 0)]
 
     ;; form-2 component
     (fn []
@@ -108,21 +129,39 @@
                                                 (when (some? el)
                                                   (.subscribeToStateChange el
                                                     (fn [jsobj]
-                                                      (let [secs      (.-currentTime jsobj)
-                                                            previndex @video-section
-                                                            index     (if (= secs duration)
-                                                                        ;; last index?
-                                                                        (int (+ (int (/ secs @!step-interval))
-                                                                               (if (= 0 (rem duration @!step-interval))
-                                                                                 0
-                                                                                 1)))
-                                                                        (int (/ secs @!step-interval)))]
+                                                      (let [secs   (.-currentTime jsobj)
+                                                            ;; reachable via >= + epsilon, not `=` --
+                                                            ;; secs and duration are both floats that
+                                                            ;; essentially never compare equal exactly,
+                                                            ;; so the last (possibly partial) section
+                                                            ;; used to be reachable only by coincidence.
+                                                            at-end? (>= secs (- duration duration-epsilon-s))
+                                                            index   (if at-end?
+                                                                      (int (+ (int (/ secs @!step-interval))
+                                                                             (if (< (rem duration @!step-interval) duration-epsilon-s)
+                                                                               0
+                                                                               1)))
+                                                                      (int (/ secs @!step-interval)))
+                                                            target  @!seek-target-section
+                                                            settling? (and (some? target)
+                                                                        (not= index target)
+                                                                        (< (- (.getTime (js/Date.)) @!seek-requested-at)
+                                                                          seek-settle-timeout-ms))]
                                                         (reset! video-time secs)
-                                                        (reset! video-section index)
-                                                        (rf/dispatch [:ui/update-current-video-section secs index])
-                                                        ;; auto-pause when the section changes
-                                                        (when (not= previndex index)
-                                                          (.pause el)))))
+                                                        (if settling?
+                                                          ;; An explicit seek is still landing: this
+                                                          ;; tick's derived index is stale (see
+                                                          ;; seek-settle-timeout-ms), so don't let it
+                                                          ;; override the section the user actually
+                                                          ;; chose, or pause on a phantom change.
+                                                          nil
+                                                          (let [previndex @video-section]
+                                                            (when (some? target) (reset! !seek-target-section nil))
+                                                            (reset! video-section index)
+                                                            (rf/dispatch [:ui/update-current-video-section secs index])
+                                                            ;; auto-pause when the section changes
+                                                            (when (not= previndex index)
+                                                              (.pause el)))))))
                                                   (reset! !video-player el)))}]]
 
           ;;;;
@@ -143,8 +182,12 @@
                          :tooltipVisible false
                          :dots           true
                          :onChange       #(do (reset! video-section %)
+                                              ;; this section is authoritative now -- see
+                                              ;; seek-settle-timeout-ms above
+                                              (reset! !seek-target-section %)
+                                              (reset! !seek-requested-at (.getTime (js/Date.)))
                                               (js/console.log "seeking section:" @video-section)
-                                              (.seek @!video-player (* % @!step-interval) "seconds")                                             
+                                              (.seek @!video-player (* % @!step-interval) "seconds")
                                               (.pause @!video-player))}]
 
            ;; for videos in portrait mode, observation-table may get out of viewport

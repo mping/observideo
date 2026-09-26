@@ -1,0 +1,211 @@
+name: Build/release Flutter Windows and Linux
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, gh-updates]
+    tags: ['v*']
+    paths:
+      - 'src-dart/**'
+      - '.github/workflows/flutter-build-win+linux.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: src-dart
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter 3.47.3
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.3
+          channel: stable
+          architecture: x64
+          cache: true
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake libass-dev libepoxy-dev libgtk-3-dev liblzma-dev \
+            libplacebo-dev meson nasm ninja-build pkg-config
+
+      - name: Cache controlled media build
+        uses: actions/cache@v6
+        with:
+          path: |
+            src-dart/native/media/cache
+            src-dart/native/media/out
+          key: linux-x64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build FFmpeg and libmpv
+        run: ./native/media/build_unix.sh
+
+      - name: Build Flutter application
+        run: ./tool/build_release.sh
+
+      - name: Create AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          linuxdeploy=build/linuxdeploy-x86_64.AppImage
+          curl --fail --location --output "$linuxdeploy" \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          chmod +x "$linuxdeploy"
+          LINUXDEPLOY="$PWD/$linuxdeploy" ./packaging/linux/build_appimage.sh
+          appimage=$(find . -maxdepth 1 -type f -name '*.AppImage' -print -quit)
+          test -n "$appimage"
+          mv "$appimage" build/Observideo-flutter-linux-x64.AppImage
+
+      - name: Package Linux bundle and DEB
+        run: |
+          bundle=build/linux/x64/release/bundle
+          tar -C "$(dirname "$bundle")" -czf build/Observideo-flutter-linux-x64.tar.gz bundle
+
+          package_root=build/deb-root
+          install -d \
+            "$package_root/DEBIAN" \
+            "$package_root/usr/bin" \
+            "$package_root/usr/lib/observideo" \
+            "$package_root/usr/share/applications" \
+            "$package_root/usr/share/icons/hicolor/256x256/apps"
+          cp -R "$bundle/." "$package_root/usr/lib/observideo/"
+          ln -s ../lib/observideo/observideo "$package_root/usr/bin/observideo"
+          cp packaging/linux/debian/control "$package_root/DEBIAN/control"
+          cp packaging/linux/observideo.desktop "$package_root/usr/share/applications/"
+          cp macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png \
+            "$package_root/usr/share/icons/hicolor/256x256/apps/observideo.png"
+          dpkg-deb --build "$package_root" build/Observideo-flutter-linux-x64.deb
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Observideo-flutter-linux-x64
+          path: |
+            src-dart/build/Observideo-flutter-linux-x64.AppImage
+            src-dart/build/Observideo-flutter-linux-x64.tar.gz
+            src-dart/build/Observideo-flutter-linux-x64.deb
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: src-dart
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter 3.47.3
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.3
+          channel: stable
+          architecture: x64
+          cache: true
+
+      - name: Set up MSYS2 build environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          suppress-deprecation-warnings: msystem-mingw64
+          update: true
+          path-type: inherit
+          install: >-
+            base-devel
+            diffutils
+            git
+            make
+            nasm
+            mingw-w64-x86_64-angleproject
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-libass
+            mingw-w64-x86_64-libplacebo
+            mingw-w64-x86_64-meson
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-tools
+
+      - name: Cache controlled media build
+        uses: actions/cache@v6
+        with:
+          path: |
+            src-dart/native/media/cache
+            src-dart/native/media/out
+          key: windows-x64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_windows_msys2.sh') }}
+
+      - name: Resolve Flutter dependencies
+        shell: pwsh
+        run: flutter pub get
+
+      - name: Build FFmpeg and libmpv
+        shell: msys2 {0}
+        run: ./native/media/build_windows_msys2.sh
+
+      - name: Validate controlled media runtime
+        shell: pwsh
+        run: ./native/media/build_windows.ps1
+
+      - name: Build Flutter application
+        shell: pwsh
+        run: ./tool/build_windows.ps1
+
+      - name: Package Windows bundle and installer
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path build\windows\x64\runner\Release\* `
+            -DestinationPath build\Observideo-flutter-windows-x64.zip
+          choco install nsis --no-progress -y
+          Push-Location packaging\windows
+          try {
+            & "$env:ChocolateyInstall\bin\makensis.exe" installer.nsi
+          } finally {
+            Pop-Location
+          }
+          Move-Item `
+            packaging\windows\Observideo-flutter-windows-x64.exe `
+            build\Observideo-flutter-windows-x64.exe
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Observideo-flutter-windows-x64
+          path: |
+            src-dart/build/Observideo-flutter-windows-x64.zip
+            src-dart/build/Observideo-flutter-windows-x64.exe
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Attach artifacts to tagged release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: release-artifacts/*
+          generate_release_notes: true

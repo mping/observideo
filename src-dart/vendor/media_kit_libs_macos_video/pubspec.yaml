@@ -1,0 +1,16 @@
+name: media_kit_libs_macos_video
+description: Observideo-controlled libmpv and FFmpeg bundle for macOS.
+version: 1.1.4+observideo.1
+publish_to: none
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.3'
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      macos:
+        pluginClass: MediaKitLibsMacosVideoPlugin
+
