@@ -4,7 +4,7 @@ set -eu
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 required_flutter='3.47.3'
 
-actual_flutter=$(flutter --version --machine | sed -n 's/.*"frameworkVersion":"\([^"]*\)".*/\1/p')
+actual_flutter=$(flutter --version --machine | sed -n 's/.*"frameworkVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 if [ "$actual_flutter" != "$required_flutter" ]; then
   echo "Flutter $required_flutter is required; found ${actual_flutter:-unknown}." >&2
   exit 1
