@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart' hide Interval;
 
 import '../domain/models.dart';
+import '../localization/app_strings.dart';
 
 typedef AnnotationValueChanged = void Function(
   AttributeId attributeId,
@@ -26,7 +27,7 @@ final class AnnotationTable extends StatelessWidget {
     final attributes = template.attributes.toList()
       ..sort((left, right) => left.id.compareTo(right.id));
     if (attributes.isEmpty) {
-      return const Text('This template has no attributes.');
+      return Text(context.strings.text('annotation_no_attributes'));
     }
     final valueRowCount = attributes.fold<int>(
       0,

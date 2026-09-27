@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 
+import 'localization/app_strings.dart';
 import 'platform/app_paths.dart';
 import 'platform/media_runtime.dart';
 import 'services/app_controller.dart';
@@ -13,33 +15,47 @@ import 'ui/app_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final strings = await AppStrings.load();
   try {
     final mediaRuntime = MediaRuntime.resolve()..validate();
     MediaKit.ensureInitialized(libmpv: mediaRuntime.libmpvPath);
     final controller = AppController(
       store: JsonStateStore(await AppPaths.stateFile()),
       scanner: VideoScanner(FfprobeMediaProbe(mediaRuntime.ffprobePath)),
-      exportService: DartExportService(),
+      exportService: DartExportService(strings: strings),
       queryService: const DartQueryService(),
+      strings: strings,
     );
     await controller.initialize();
-    runApp(ObservideoApp(controller: controller));
+    runApp(ObservideoApp(controller: controller, strings: strings));
   } on Object catch (error) {
-    runApp(StartupFailureApp(message: error.toString()));
+    debugPrint('Falha ao iniciar: $error');
+    runApp(StartupFailureApp(strings: strings));
   }
 }
 
 final class ObservideoApp extends StatelessWidget {
-  const ObservideoApp({required this.controller, super.key});
+  const ObservideoApp({
+    required this.controller,
+    required this.strings,
+    super.key,
+  });
 
   final AppController controller;
+  final AppStrings strings;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Observideo',
-    debugShowCheckedModeBanner: false,
-    theme: observideoTheme(),
-    home: AppShell(controller: controller),
+  Widget build(BuildContext context) => AppStringsScope(
+    strings: strings,
+    child: MaterialApp(
+      title: strings.text('app_title'),
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('pt', 'PT'),
+      supportedLocales: const <Locale>[Locale('pt', 'PT')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: observideoTheme(),
+      home: AppShell(controller: controller),
+    ),
   );
 }
 
@@ -80,31 +96,41 @@ TextStyle _smallerTextStyle(TextStyle? style, double defaultSize) =>
     );
 
 final class StartupFailureApp extends StatelessWidget {
-  const StartupFailureApp({required this.message, super.key});
+  const StartupFailureApp({required this.strings, super.key});
 
-  final String message;
+  final AppStrings strings;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    theme: observideoTheme(),
-    home: Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(Icons.error_outline, size: 56),
-                const SizedBox(height: 16),
-                Text(
-                  'Observideo could not start',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 12),
-                SelectableText(message, textAlign: TextAlign.center),
-              ],
+  Widget build(BuildContext context) => AppStringsScope(
+    strings: strings,
+    child: MaterialApp(
+      title: strings.text('app_title'),
+      locale: const Locale('pt', 'PT'),
+      supportedLocales: const <Locale>[Locale('pt', 'PT')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: observideoTheme(),
+      home: Scaffold(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.error_outline, size: 56),
+                  const SizedBox(height: 16),
+                  Text(
+                    strings.text('startup_failure_title'),
+                    style: observideoTheme().textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    strings.text('startup_failure_message'),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

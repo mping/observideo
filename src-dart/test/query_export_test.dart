@@ -3,10 +3,18 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observideo/domain/models.dart';
+import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/services/export_service.dart';
 import 'package:observideo/services/query_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
+
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
   final template = ObservationTemplate(
     id: 't1',
     name: 'Demo',
@@ -74,14 +82,10 @@ void main() {
         <int, int>{},
       ],
     );
-    final csv = DartExportService().buildVideoCsv(
-      template,
-      31000,
-      annotation,
-      ExportValueMode.name,
-    );
+    final csv = DartExportService(strings: strings)
+        .buildVideoCsv(template, 31000, annotation, ExportValueMode.name);
     final lines = csv.split('\r\n');
-    expect(lines[0], 'Interval,Start (s),End (s),Peer,Gender');
+    expect(lines[0], 'Intervalo,Início (s),Fim (s),Peer,Gender');
     expect(lines[1], '1,0.000,15.000,"Group, with peers",Same');
     expect(lines[3], '3,30.000,31.000,,');
   });
@@ -104,11 +108,8 @@ void main() {
       ],
     );
     final output = '${directory.path}/out.zip';
-    final result = await DartExportService().exportAllToZip(
-      database,
-      ExportValueMode.name,
-      output,
-    );
+    final result = await DartExportService(strings: strings)
+        .exportAllToZip(database, ExportValueMode.name, output);
     expect(result.ok, isTrue, reason: result.error);
     final archive = ZipDecoder().decodeBytes(await File(output).readAsBytes());
     expect(archive.files.map((file) => file.name).toSet(), <String>{

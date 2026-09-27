@@ -1,6 +1,7 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
 import '../services/export_service.dart';
 
@@ -31,7 +32,10 @@ final class _ExportScreenState extends State<ExportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text('Export', style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                context.strings.text('export_title'),
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: 20),
               Card.outlined(
                 child: Padding(
@@ -40,24 +44,29 @@ final class _ExportScreenState extends State<ExportScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'Annotated videos',
+                        context.strings.text('export_annotated_videos'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '$count videos will be written to one ZIP archive, with '
-                        'one RFC 4180 CSV file per video.',
+                        context.strings.text('export_summary', <String, Object>{
+                          'count': count,
+                        }),
                       ),
                       const SizedBox(height: 20),
                       SegmentedButton<ExportValueMode>(
-                        segments: const <ButtonSegment<ExportValueMode>>[
+                        segments: <ButtonSegment<ExportValueMode>>[
                           ButtonSegment<ExportValueMode>(
                             value: ExportValueMode.name,
-                            label: Text('Value names'),
+                            label: Text(
+                              context.strings.text('export_value_names'),
+                            ),
                           ),
                           ButtonSegment<ExportValueMode>(
                             value: ExportValueMode.oneBasedIndex,
-                            label: Text('1-based indexes'),
+                            label: Text(
+                              context.strings.text('export_one_based_indexes'),
+                            ),
                           ),
                         ],
                         selected: <ExportValueMode>{mode},
@@ -68,7 +77,11 @@ final class _ExportScreenState extends State<ExportScreen> {
                       FilledButton.icon(
                         onPressed: exporting || count == 0 ? null : _export,
                         icon: const Icon(Icons.archive),
-                        label: Text(exporting ? 'Exporting…' : 'Export ZIP'),
+                        label: Text(
+                          exporting
+                              ? context.strings.text('export_in_progress')
+                              : context.strings.text('export_zip'),
+                        ),
                       ),
                     ],
                   ),
@@ -83,9 +96,12 @@ final class _ExportScreenState extends State<ExportScreen> {
 
   Future<void> _export() async {
     final location = await getSaveLocation(
-      suggestedName: 'observideo-annotations.zip',
-      acceptedTypeGroups: const <XTypeGroup>[
-        XTypeGroup(label: 'ZIP archive', extensions: <String>['zip']),
+      suggestedName: context.strings.text('export_file_name'),
+      acceptedTypeGroups: <XTypeGroup>[
+        XTypeGroup(
+          label: context.strings.text('export_file_type'),
+          extensions: const <String>['zip'],
+        ),
       ],
     );
     if (location == null) return;
@@ -98,7 +114,11 @@ final class _ExportScreenState extends State<ExportScreen> {
     if (!mounted) return;
     setState(() => exporting = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(outcome.ok ? 'Export complete.' : outcome.error!)),
+      SnackBar(
+        content: Text(
+          outcome.ok ? context.strings.text('export_complete') : outcome.error!,
+        ),
+      ),
     );
   }
 }

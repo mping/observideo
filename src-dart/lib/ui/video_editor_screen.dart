@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as p;
 
 import '../domain/interval_model.dart';
+import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
 import '../services/playback_controller.dart';
 import 'annotation_table.dart';
@@ -35,6 +36,7 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
     final annotation = video.annotation!;
     backend = MediaKitPlaybackBackend();
     playback = MediaKitPlaybackController(
+      strings: widget.controller.strings,
       backend: backend,
       onSelectedChanged: (index) =>
           widget.controller.setLastInterval(widget.videoPath, index),
@@ -109,7 +111,9 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
                         IconButton(
-                          tooltip: 'Previous interval',
+                          tooltip: context.strings.text(
+                            'editor_previous_interval',
+                          ),
                           onPressed: playback.selected == 0
                               ? null
                               : () => unawaited(
@@ -118,7 +122,9 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
                           icon: const Icon(Icons.skip_previous),
                         ),
                         IconButton.filled(
-                          tooltip: playback.isPlaying ? 'Pause' : 'Play',
+                          tooltip: playback.isPlaying
+                              ? context.strings.text('editor_pause')
+                              : context.strings.text('editor_play'),
                           onPressed: () => unawaited(
                             playback.isPlaying
                                 ? playback.pause()
@@ -129,12 +135,14 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Replay interval',
+                          tooltip: context.strings.text(
+                            'editor_replay_interval',
+                          ),
                           onPressed: () => unawaited(playback.replay()),
                           icon: const Icon(Icons.replay),
                         ),
                         IconButton(
-                          tooltip: 'Next interval',
+                          tooltip: context.strings.text('editor_next_interval'),
                           onPressed:
                               playback.selected + 1 >= playback.intervalCount
                               ? null
@@ -145,7 +153,19 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
                         ),
                         const SizedBox(width: 16),
                         Text(
-                          '${_seconds(playback.positionMs)} / ${_seconds(video.durationMs)}',
+                          context.strings.text(
+                            'editor_time_position',
+                            <String, Object>{
+                              'current': _seconds(
+                                context.strings,
+                                playback.positionMs,
+                              ),
+                              'total': _seconds(
+                                context.strings,
+                                video.durationMs,
+                              ),
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -160,12 +180,33 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
                 padding: const EdgeInsets.all(20),
                 children: <Widget>[
                   Text(
-                    'Interval ${playback.selected + 1} of ${playback.intervalCount}',
+                    context.strings.text(
+                      'editor_interval_position',
+                      <String, Object>{
+                        'current': playback.selected + 1,
+                        'total': playback.intervalCount,
+                      },
+                    ),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Text(
-                    '${_seconds(IntervalModel.startMs(playback.selected, annotation.intervalMs))}'
-                    '–${_seconds(IntervalModel.endMs(playback.selected, video.durationMs, annotation.intervalMs))}',
+                    context.strings.text('editor_time_range', <String, Object>{
+                      'start': _seconds(
+                        context.strings,
+                        IntervalModel.startMs(
+                          playback.selected,
+                          annotation.intervalMs,
+                        ),
+                      ),
+                      'end': _seconds(
+                        context.strings,
+                        IntervalModel.endMs(
+                          playback.selected,
+                          video.durationMs,
+                          annotation.intervalMs,
+                        ),
+                      ),
+                    }),
                   ),
                   const SizedBox(height: 20),
                   AnnotationTable(
@@ -189,6 +230,8 @@ final class _VideoEditorScreenState extends State<VideoEditorScreen> {
     );
   }
 
-  static String _seconds(int milliseconds) =>
-      '${(milliseconds / 1000).toStringAsFixed(3)} s';
+  static String _seconds(AppStrings strings, int milliseconds) => strings.text(
+    'editor_seconds',
+    <String, Object>{'value': (milliseconds / 1000).toStringAsFixed(3)},
+  );
 }

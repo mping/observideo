@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../domain/models.dart';
+import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
 import 'video_editor_screen.dart';
 
@@ -24,12 +25,12 @@ final class VideosScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Videos',
+                    context.strings.text('videos_title'),
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   Text(
                     controller.database.videosFolder.isEmpty
-                        ? 'Choose a folder containing MP4, AVI, or WebM files.'
+                        ? context.strings.text('videos_folder_prompt')
                         : controller.database.videosFolder,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -52,7 +53,11 @@ final class VideosScreen extends StatelessWidget {
                       }
                     },
               icon: const Icon(Icons.folder_open),
-              label: Text(controller.scanning ? 'Scanning…' : 'Choose folder'),
+              label: Text(
+                controller.scanning
+                    ? context.strings.text('videos_scanning')
+                    : context.strings.text('videos_choose_folder'),
+              ),
             ),
           ],
         ),
@@ -67,7 +72,7 @@ final class VideosScreen extends StatelessWidget {
         const SizedBox(height: 20),
         Expanded(
           child: controller.database.videos.isEmpty
-              ? const Center(child: Text('No videos discovered yet.'))
+              ? Center(child: Text(context.strings.text('videos_empty')))
               : ListView.separated(
                   itemCount: controller.database.videos.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
@@ -102,10 +107,10 @@ final class _VideoRow extends StatelessWidget {
       title: Text(p.basename(video.path)),
       subtitle: Text(
         <String>[
-          if (video.missing) 'Missing',
+          if (video.missing) context.strings.text('videos_missing'),
           if (video.durationMs > 0) _formatDuration(video.durationMs),
           if (template != null) template.name,
-          if (intervalChanged) 'Uses previous interval length',
+          if (intervalChanged) context.strings.text('videos_previous_interval'),
         ].join(' • '),
       ),
       trailing: SizedBox(
@@ -115,15 +120,15 @@ final class _VideoRow extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<String?>(
                 initialValue: annotation?.templateId,
-                decoration: const InputDecoration(
-                  labelText: 'Template',
+                decoration: InputDecoration(
+                  labelText: context.strings.text('videos_template_label'),
                   isDense: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
+                  DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('None'),
+                    child: Text(context.strings.text('action_none')),
                   ),
                   ...controller.database.templates.map(
                     (item) => DropdownMenuItem<String?>(
@@ -150,7 +155,7 @@ final class _VideoRow extends StatelessWidget {
                       ),
                     ),
               icon: const Icon(Icons.edit),
-              label: const Text('Annotate'),
+              label: Text(context.strings.text('videos_annotate')),
             ),
           ],
         ),
@@ -165,19 +170,22 @@ final class _VideoRow extends StatelessWidget {
           await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Clear existing annotations?'),
-              content: const Text(
-                'Changing or removing the template permanently clears this '
-                "video's interval annotations.",
+              title: Text(
+                context.strings.text('videos_clear_annotations_title'),
+              ),
+              content: Text(
+                context.strings.text('videos_clear_annotations_message'),
               ),
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
+                  child: Text(context.strings.text('action_cancel')),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Clear and continue'),
+                  child: Text(
+                    context.strings.text('videos_clear_and_continue'),
+                  ),
                 ),
               ],
             ),

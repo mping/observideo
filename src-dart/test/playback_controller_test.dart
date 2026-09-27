@@ -1,13 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/services/playback_controller.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
+
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
   test('goTo selects slot zero and pauses at selected interval end', () async {
     final backend = _FakePlaybackBackend();
     final completed = <int>[];
     final controller = MediaKitPlaybackController(
+      strings: strings,
       backend: backend,
       onIntervalCompleted: completed.add,
     );
@@ -33,7 +42,10 @@ void main() {
 
   test('play after completion advances, while last interval waits', () async {
     final backend = _FakePlaybackBackend();
-    final controller = MediaKitPlaybackController(backend: backend);
+    final controller = MediaKitPlaybackController(
+      strings: strings,
+      backend: backend,
+    );
     addTearDown(controller.dispose);
     await controller.open(
       '/video.mp4',
@@ -61,6 +73,7 @@ void main() {
     final backend = _FakePlaybackBackend();
     final completed = <int>[];
     final controller = MediaKitPlaybackController(
+      strings: strings,
       backend: backend,
       onIntervalCompleted: completed.add,
     );

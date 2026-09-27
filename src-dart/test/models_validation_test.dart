@@ -5,10 +5,18 @@ import 'package:observideo/domain/default_template.dart';
 import 'package:observideo/domain/interval_model.dart';
 import 'package:observideo/domain/models.dart';
 import 'package:observideo/domain/validation.dart';
+import 'package:observideo/localization/app_strings.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
+
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
   test('schema v1 JSON round-trips exactly', () {
-    final database = makeDefaultDatabase()..videosFolder = '/videos';
+    final database = makeDefaultDatabase(strings)..videosFolder = '/videos';
     final template = database.templates.single;
     database.videos.add(
       VideoRecord(
@@ -51,7 +59,7 @@ void main() {
   });
 
   test('validation rejects unknown values and incorrect interval counts', () {
-    final database = makeDefaultDatabase();
+    final database = makeDefaultDatabase(strings);
     database.videos.add(
       VideoRecord(
         path: '/a.mp4',
@@ -74,7 +82,7 @@ void main() {
   });
 
   test('default template has stable identity and monotonic IDs', () {
-    final template = makeDemoTemplate();
+    final template = makeDemoTemplate(strings);
     expect(template.id, 'fb52dd46-85cc-4864-b11e-44b8a5b28331');
     expect(template.name, 'Observação BLP');
     expect(template.attributes, hasLength(8));

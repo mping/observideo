@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../domain/interval_model.dart';
+import '../localization/app_strings.dart';
 
 abstract interface class PlaybackBackend {
   Stream<int> get positionChanges;
@@ -133,6 +134,7 @@ final class MediaKitPlaybackBackend implements PlaybackBackend {
 final class MediaKitPlaybackController extends ChangeNotifier
     implements PlaybackController {
   MediaKitPlaybackController({
+    required this.strings,
     PlaybackBackend? backend,
     this.onSelectedChanged,
     this.onIntervalCompleted,
@@ -149,6 +151,7 @@ final class MediaKitPlaybackController extends ChangeNotifier
   }
 
   final PlaybackBackend backend;
+  final AppStrings strings;
   final ValueChanged<int>? onSelectedChanged;
   final ValueChanged<int>? onIntervalCompleted;
   final _subscriptions = <StreamSubscription<Object?>>[];
@@ -295,21 +298,23 @@ final class MediaKitPlaybackController extends ChangeNotifier
   }
 
   void _handleError(String message) {
+    debugPrint('Erro de reprodução: $message');
     final path = _path;
     if (!_softwareFallbackAttempted && path != null) {
       _softwareFallbackAttempted = true;
       unawaited(() async {
         try {
           await backend.useSoftwareDecoding(path, _positionMs);
-          _error = 'Hardware decoding failed; using software decoding.';
+          _error = strings.text('error_hardware_decoding');
         } on Object catch (fallbackError) {
-          _error = '$message; software fallback failed: $fallbackError';
+          debugPrint('Falha da descodificação por software: $fallbackError');
+          _error = strings.text('error_software_decoding');
         }
         notifyListeners();
       }());
       return;
     }
-    _error = message;
+    _error = strings.text('error_playback');
     notifyListeners();
   }
 

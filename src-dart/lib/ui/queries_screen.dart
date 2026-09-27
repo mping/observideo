@@ -2,6 +2,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
+import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
 import '../services/query_service.dart';
 
@@ -38,11 +39,16 @@ final class _QueriesScreenState extends State<QueriesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text('Queries', style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            context.strings.text('queries_title'),
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 20),
           if (template == null)
-            const Expanded(
-              child: Center(child: Text('Create a template first.')),
+            Expanded(
+              child: Center(
+                child: Text(context.strings.text('queries_create_template')),
+              ),
             )
           else ...<Widget>[
             Row(
@@ -50,9 +56,9 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: template.id,
-                    decoration: const InputDecoration(
-                      labelText: 'Template',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.strings.text('templates_label'),
+                      border: const OutlineInputBorder(),
                     ),
                     items: templates
                         .map(
@@ -72,14 +78,14 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                 ),
                 const SizedBox(width: 16),
                 SegmentedButton<QueryAggregator>(
-                  segments: const <ButtonSegment<QueryAggregator>>[
+                  segments: <ButtonSegment<QueryAggregator>>[
                     ButtonSegment<QueryAggregator>(
                       value: QueryAggregator.identity,
-                      label: Text('Per video'),
+                      label: Text(context.strings.text('queries_per_video')),
                     ),
                     ButtonSegment<QueryAggregator>(
                       value: QueryAggregator.byPrefix,
-                      label: Text('Group by 8-char prefix'),
+                      label: Text(context.strings.text('queries_group_prefix')),
                     ),
                   ],
                   selected: <QueryAggregator>{aggregator},
@@ -95,7 +101,7 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                 children: <Widget>[
                   Expanded(
                     child: _SelectionPanel(
-                      title: 'Numerator',
+                      title: context.strings.text('queries_numerator'),
                       template: template,
                       selection: top,
                       onChanged: () => setState(() {}),
@@ -104,7 +110,7 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _SelectionPanel(
-                      title: 'Denominator',
+                      title: context.strings.text('queries_denominator'),
                       template: template,
                       selection: bottom,
                       onChanged: () => setState(() {}),
@@ -121,7 +127,7 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                             child: Row(
                               children: <Widget>[
                                 Text(
-                                  'Results',
+                                  context.strings.text('queries_results'),
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium,
@@ -129,11 +135,15 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                                 const Spacer(),
                                 FilledButton(
                                   onPressed: _run,
-                                  child: const Text('Run query'),
+                                  child: Text(
+                                    context.strings.text('queries_run'),
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 IconButton(
-                                  tooltip: 'Export CSV',
+                                  tooltip: context.strings.text(
+                                    'queries_export_csv',
+                                  ),
                                   onPressed: rows.isEmpty
                                       ? null
                                       : () => _export(template),
@@ -145,8 +155,12 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                           const Divider(height: 1),
                           Expanded(
                             child: rows.isEmpty
-                                ? const Center(
-                                    child: Text('No positive matches.'),
+                                ? Center(
+                                    child: Text(
+                                      context.strings.text(
+                                        'queries_no_matches',
+                                      ),
+                                    ),
                                   )
                                 : ListView.builder(
                                     itemCount: rows.length,
@@ -156,8 +170,14 @@ final class _QueriesScreenState extends State<QueriesScreen> {
                                         dense: true,
                                         title: Text(row.name),
                                         trailing: Text(
-                                          '${row.topMatched} / ${row.bottomMatched} '
-                                          '(total ${row.total})',
+                                          context.strings.text(
+                                            'queries_result_count',
+                                            <String, Object>{
+                                              'top': row.topMatched,
+                                              'bottom': row.bottomMatched,
+                                              'total': row.total,
+                                            },
+                                          ),
                                         ),
                                       );
                                     },
@@ -194,34 +214,59 @@ final class _QueriesScreenState extends State<QueriesScreen> {
   }
 
   Future<void> _export(ObservationTemplate template) async {
+    final strings = context.strings;
+    final numeratorRow = _selectionRow(
+      strings,
+      strings.text('queries_numerator'),
+      template,
+      top,
+    );
+    final denominatorRow = _selectionRow(
+      strings,
+      strings.text('queries_denominator'),
+      template,
+      bottom,
+    );
     final location = await getSaveLocation(
-      suggestedName: 'observideo-query.csv',
-      acceptedTypeGroups: const <XTypeGroup>[
-        XTypeGroup(label: 'CSV', extensions: <String>['csv']),
+      suggestedName: strings.text('queries_file_name'),
+      acceptedTypeGroups: <XTypeGroup>[
+        XTypeGroup(
+          label: strings.text('queries_file_type'),
+          extensions: const <String>['csv'],
+        ),
       ],
     );
     if (location == null) return;
     final outcome = await widget.controller.exportService.exportQueryCsv(
-      _selectionRow('Numerator', template, top),
-      _selectionRow('Denominator', template, bottom),
+      numeratorRow,
+      denominatorRow,
       rows,
       location.path,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(outcome.ok ? 'Query exported.' : outcome.error!)),
+      SnackBar(
+        content: Text(
+          outcome.ok ? strings.text('queries_exported') : outcome.error!,
+        ),
+      ),
     );
   }
 
   List<String> _selectionRow(
+    AppStrings strings,
     String label,
     ObservationTemplate template,
     QuerySelection selection,
   ) => <String>[
     label,
     for (final attribute in template.attributes)
-      '${attribute.name}: '
-          '${attribute.findValue(selection[attribute.id] ?? -1)?.name ?? 'Any'}',
+      strings.text('queries_selection', <String, Object>{
+        'attribute': attribute.name,
+        'value':
+            attribute.findValue(selection[attribute.id] ?? -1)?.name ??
+            strings.text('action_any'),
+      }),
   ];
 }
 
@@ -253,7 +298,10 @@ final class _SelectionPanel extends StatelessWidget {
               border: const OutlineInputBorder(),
             ),
             items: <DropdownMenuItem<int?>>[
-              const DropdownMenuItem<int?>(value: null, child: Text('Any')),
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text(context.strings.text('action_any')),
+              ),
               ...attribute.values.map(
                 (value) => DropdownMenuItem<int?>(
                   value: value.id,

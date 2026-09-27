@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
 import 'export_screen.dart';
 import 'queries_screen.dart';
@@ -40,7 +41,7 @@ final class _AppShellState extends State<AppShell> {
                 actions: <Widget>[
                   TextButton(
                     onPressed: widget.controller.clearError,
-                    child: const Text('Dismiss'),
+                    child: Text(context.strings.text('action_dismiss')),
                   ),
                 ],
               ),
@@ -56,26 +57,28 @@ final class _AppShellState extends State<AppShell> {
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Icon(Icons.video_camera_back, size: 32),
                     ),
-                    destinations: const <NavigationRailDestination>[
+                    destinations: <NavigationRailDestination>[
                       NavigationRailDestination(
-                        icon: Icon(Icons.video_library_outlined),
-                        selectedIcon: Icon(Icons.video_library),
-                        label: Text('Videos'),
+                        icon: const Icon(Icons.video_library_outlined),
+                        selectedIcon: const Icon(Icons.video_library),
+                        label: Text(context.strings.text('navigation_videos')),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.view_list_outlined),
-                        selectedIcon: Icon(Icons.view_list),
-                        label: Text('Templates'),
+                        icon: const Icon(Icons.view_list_outlined),
+                        selectedIcon: const Icon(Icons.view_list),
+                        label: Text(
+                          context.strings.text('navigation_templates'),
+                        ),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.query_stats_outlined),
-                        selectedIcon: Icon(Icons.query_stats),
-                        label: Text('Queries'),
+                        icon: const Icon(Icons.query_stats_outlined),
+                        selectedIcon: const Icon(Icons.query_stats),
+                        label: Text(context.strings.text('navigation_queries')),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.archive_outlined),
-                        selectedIcon: Icon(Icons.archive),
-                        label: Text('Export'),
+                        icon: const Icon(Icons.archive_outlined),
+                        selectedIcon: const Icon(Icons.archive),
+                        label: Text(context.strings.text('navigation_export')),
                       ),
                     ],
                   ),

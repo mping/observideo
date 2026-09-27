@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   archive: 4.3.0
   crypto: 3.0.7
   ffi: 2.1.4
@@ -17,6 +19,7 @@ dependencies:
   media_kit_video: 2.0.1
   path: 1.9.1
   path_provider: 2.1.5
+  yaml: 3.1.4
   media_kit_libs_macos_video:
     path: vendor/media_kit_libs_macos_video
   media_kit_libs_windows_video:
@@ -33,4 +36,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  assets:
+    - assets/i18n/pt.yaml

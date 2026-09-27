@@ -90,7 +90,7 @@
        [antd/input {:value    tmpl-name
                     :onChange #(update-template-name template (-> % .-target .-value))}]]
 
-      [antd/form-item {:label (str "Interval (secs): " intv)}
+      [antd/form-item {:label (str "Intervalo (segundos): " intv)}
        [antd/slider {:min            1
                      :max            60
                      :value          intv

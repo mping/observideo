@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../domain/default_template.dart';
 import '../domain/interval_model.dart';
 import '../domain/models.dart';
+import '../localization/app_strings.dart';
 import 'export_service.dart';
 import 'query_service.dart';
 import 'state_store.dart';
@@ -17,14 +18,16 @@ final class AppController extends ChangeNotifier {
     required this.scanner,
     required this.exportService,
     required this.queryService,
-  });
+    required this.strings,
+  }) : database = makeDefaultDatabase(strings);
 
   final StateStore store;
   final VideoScanner scanner;
   final ExportService exportService;
   final QueryService queryService;
+  final AppStrings strings;
 
-  Database database = makeDefaultDatabase();
+  Database database;
   bool initialized = false;
   bool scanning = false;
   int scanCompleted = 0;
@@ -35,10 +38,11 @@ final class AppController extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       await store.acquireLock();
-      database = await store.load() ?? makeDefaultDatabase();
+      database = await store.load() ?? makeDefaultDatabase(strings);
       initialized = true;
     } on Object catch (exception) {
-      error = 'Could not open application data: $exception';
+      debugPrint('Não foi possível abrir os dados da aplicação: $exception');
+      error = strings.text('error_open_data');
       notifyListeners();
       rethrow;
     }
@@ -64,7 +68,8 @@ final class AppController extends ChangeNotifier {
       _mergeScan(entries);
       _scheduleSave();
     } on Object catch (exception) {
-      error = 'Could not scan videos: $exception';
+      debugPrint('Não foi possível analisar os vídeos: $exception');
+      error = strings.text('error_scan_videos');
     } finally {
       scanning = false;
       notifyListeners();
@@ -120,9 +125,11 @@ final class AppController extends ChangeNotifier {
     final video = database.findVideo(videoPath);
     final template = database.findTemplate(templateId);
     if (video == null || template == null) {
-      return 'Video or template not found.';
+      return strings.text('error_video_template_not_found');
     }
-    if (video.durationMs <= 0) return 'The video duration is unknown.';
+    if (video.durationMs <= 0) {
+      return strings.text('error_video_duration_unknown');
+    }
     video.annotation = Annotation(
       templateId: templateId,
       intervalMs: template.intervalMs,
@@ -171,7 +178,9 @@ final class AppController extends ChangeNotifier {
   }
 
   String addTemplate(String name, int intervalMs) {
-    final template = ObservationTemplate.fromJson(makeDemoTemplate().toJson());
+    final template = ObservationTemplate.fromJson(
+      makeDemoTemplate(strings).toJson(),
+    );
     final id = _uuidV4();
     final replacement = ObservationTemplate(
       id: id,
@@ -314,7 +323,8 @@ final class AppController extends ChangeNotifier {
     _saveTimer = null;
     final errors = await store.save(database);
     if (errors.isNotEmpty) {
-      error = 'Could not save: ${errors.join('; ')}';
+      debugPrint('Não foi possível guardar: ${errors.join('; ')}');
+      error = strings.text('error_save');
       notifyListeners();
     }
   }

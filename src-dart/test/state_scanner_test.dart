@@ -3,12 +3,20 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observideo/domain/default_template.dart';
 import 'package:observideo/domain/models.dart';
+import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/platform/native_platform_files.dart';
 import 'package:observideo/services/media_probe.dart';
 import 'package:observideo/services/state_store.dart';
 import 'package:observideo/services/video_scanner.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
+
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
   test('state lock excludes another store until it is released', () async {
     final directory = await Directory.systemTemp.createTemp('observideo-lock-');
     addTearDown(() => directory.delete(recursive: true));
@@ -52,7 +60,7 @@ void main() {
       await store.acquireLock();
       addTearDown(store.close);
 
-      final good = makeDefaultDatabase()..videosFolder = '/videos';
+      final good = makeDefaultDatabase(strings)..videosFolder = '/videos';
       expect(await store.save(good), isEmpty);
       expect((await store.load())!.videosFolder, '/videos');
 
@@ -74,14 +82,15 @@ void main() {
         path,
         platformFiles: _TestPlatformFiles(),
       );
-      final original = makeDefaultDatabase()..videosFolder = '/original';
+      final original = makeDefaultDatabase(strings)..videosFolder = '/original';
       expect(await goodStore.save(original), isEmpty);
 
       final failingStore = JsonStateStore(
         path,
         platformFiles: _TestPlatformFiles(failReplacement: true),
       );
-      final replacement = makeDefaultDatabase()..videosFolder = '/replacement';
+      final replacement = makeDefaultDatabase(strings)
+        ..videosFolder = '/replacement';
       await expectLater(
         failingStore.save(replacement),
         throwsA(isA<FileSystemException>()),

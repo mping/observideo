@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observideo/domain/default_template.dart';
 import 'package:observideo/domain/models.dart';
+import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/main.dart';
 import 'package:observideo/services/app_controller.dart';
 import 'package:observideo/services/export_service.dart';
@@ -12,30 +13,41 @@ import 'package:observideo/services/video_scanner.dart';
 import 'package:observideo/ui/annotation_table.dart';
 
 void main() {
-  testWidgets('desktop shell exposes all workflows', (tester) async {
-    final controller = _controller();
-    addTearDown(controller.dispose);
-    await tester.pumpWidget(ObservideoApp(controller: controller));
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
 
-    expect(find.text('Videos'), findsWidgets);
-    expect(find.text('Templates'), findsOneWidget);
-    expect(find.text('Queries'), findsOneWidget);
-    expect(find.text('Export'), findsOneWidget);
-    expect(find.text('No videos discovered yet.'), findsOneWidget);
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
+  testWidgets('desktop shell exposes all workflows', (tester) async {
+    final controller = _controller(strings);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      ObservideoApp(controller: controller, strings: strings),
+    );
+
+    expect(find.text(strings.text('navigation_videos')), findsWidgets);
+    expect(find.text(strings.text('navigation_templates')), findsOneWidget);
+    expect(find.text(strings.text('navigation_queries')), findsOneWidget);
+    expect(find.text(strings.text('navigation_export')), findsOneWidget);
+    expect(find.text(strings.text('videos_empty')), findsOneWidget);
   });
 
   testWidgets('a template can be created from the Templates screen', (
     tester,
   ) async {
-    final controller = _controller();
+    final controller = _controller(strings);
     addTearDown(controller.dispose);
-    await tester.pumpWidget(ObservideoApp(controller: controller));
+    await tester.pumpWidget(
+      ObservideoApp(controller: controller, strings: strings),
+    );
     await tester.tap(find.byIcon(Icons.view_list_outlined));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New template'));
+    await tester.tap(find.text(strings.text('templates_new')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Field study');
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text(strings.text('action_save')));
     await tester.pumpAndSettle();
 
     expect(
@@ -46,10 +58,85 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
   });
 
+  testWidgets(
+    'template attributes are columns with vertically stacked values',
+    (tester) async {
+      final controller = _controller(strings);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        ObservideoApp(controller: controller, strings: strings),
+      );
+      await tester.tap(find.byIcon(Icons.view_list_outlined));
+      await tester.pumpAndSettle();
+
+      final template = controller.database.templates.first;
+      final attributes = template.attributes.toList()
+        ..sort((left, right) => left.id.compareTo(right.id));
+      final firstAttribute = attributes.first;
+      final secondAttribute = attributes[1];
+      final firstHeader = find.byKey(
+        ValueKey<String>('template-attribute-header-${firstAttribute.id}'),
+      );
+      final secondHeader = find.byKey(
+        ValueKey<String>('template-attribute-header-${secondAttribute.id}'),
+      );
+
+      expect(
+        tester.getCenter(firstHeader).dy,
+        closeTo(tester.getCenter(secondHeader).dy, 0.1),
+      );
+      expect(
+        tester.getCenter(firstHeader).dx,
+        lessThan(tester.getCenter(secondHeader).dx),
+      );
+
+      final firstValue = find.byKey(
+        ValueKey<String>(
+          'template-value-${firstAttribute.id}-${firstAttribute.values[0].id}',
+        ),
+      );
+      final secondValue = find.byKey(
+        ValueKey<String>(
+          'template-value-${firstAttribute.id}-${firstAttribute.values[1].id}',
+        ),
+      );
+      expect(
+        tester.getCenter(firstValue).dx,
+        closeTo(tester.getCenter(secondValue).dx, 0.1),
+      );
+      expect(
+        tester.getCenter(firstValue).dy,
+        lessThan(tester.getCenter(secondValue).dy),
+      );
+      expect(
+        find.byKey(const ValueKey<String>('template-attribute-table')),
+        findsOneWidget,
+      );
+      final horizontalScroll = find.byKey(
+        const ValueKey<String>('template-attribute-horizontal-scroll'),
+      );
+      expect(
+        tester.widget<SingleChildScrollView>(horizontalScroll).scrollDirection,
+        Axis.horizontal,
+      );
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(
+          of: horizontalScroll,
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(scrollable.position.maxScrollExtent, greaterThan(0));
+      await tester.drag(horizontalScroll, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(scrollable.position.pixels, greaterThan(0));
+      expect(find.byType(InputChip), findsNothing);
+    },
+  );
+
   testWidgets('annotation values use the original clickable column table', (
     tester,
   ) async {
-    final template = makeDemoTemplate();
+    final template = makeDemoTemplate(strings);
     final interval = <int, int>{};
     AttributeId? changedAttribute;
     ValueId? changedValue;
@@ -135,23 +222,26 @@ void main() {
   testWidgets('application theme uses a smaller overall type scale', (
     tester,
   ) async {
-    final controller = _controller();
+    final controller = _controller(strings);
     addTearDown(controller.dispose);
-    await tester.pumpWidget(ObservideoApp(controller: controller));
-    final context = tester.element(find.text('No videos discovered yet.'));
+    await tester.pumpWidget(
+      ObservideoApp(controller: controller, strings: strings),
+    );
+    final context = tester.element(find.text(strings.text('videos_empty')));
     expect(Theme.of(context).textTheme.bodyMedium!.fontSize, lessThan(14));
   });
 }
 
-AppController _controller() {
+AppController _controller(AppStrings strings) {
   final controller = AppController(
     store: _MemoryStateStore(),
     scanner: VideoScanner(const _FakeProbe()),
-    exportService: DartExportService(),
+    exportService: DartExportService(strings: strings),
     queryService: const DartQueryService(),
+    strings: strings,
   );
   controller
-    ..database = makeDefaultDatabase()
+    ..database = makeDefaultDatabase(strings)
     ..initialized = true;
   return controller;
 }

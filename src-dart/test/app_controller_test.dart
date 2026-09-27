@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observideo/domain/default_template.dart';
 import 'package:observideo/domain/models.dart';
+import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/services/app_controller.dart';
 import 'package:observideo/services/export_service.dart';
 import 'package:observideo/services/media_probe.dart';
@@ -9,8 +10,15 @@ import 'package:observideo/services/state_store.dart';
 import 'package:observideo/services/video_scanner.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppStrings strings;
+
+  setUpAll(() async {
+    strings = await AppStrings.load();
+  });
+
   test('template mutations use monotonic IDs and clear deleted values', () {
-    final controller = _controller();
+    final controller = _controller(strings);
     addTearDown(controller.dispose);
     final template = controller.database.templates.single;
     final attributeId = controller.addAttribute(template.id, 'New attribute');
@@ -44,7 +52,7 @@ void main() {
   });
 
   test('template deletion is blocked while any video uses it', () {
-    final controller = _controller();
+    final controller = _controller(strings);
     addTearDown(controller.dispose);
     final template = controller.database.templates.single;
     controller.database.videos.add(
@@ -66,7 +74,7 @@ void main() {
   });
 
   test('changing a template keeps each existing video interval frozen', () {
-    final controller = _controller();
+    final controller = _controller(strings);
     addTearDown(controller.dispose);
     final template = controller.database.templates.single;
     controller.database.videos.add(
@@ -82,15 +90,16 @@ void main() {
   });
 }
 
-AppController _controller() {
+AppController _controller(AppStrings strings) {
   final controller = AppController(
     store: _MemoryStateStore(),
     scanner: VideoScanner(const _NoProbe()),
-    exportService: DartExportService(),
+    exportService: DartExportService(strings: strings),
     queryService: const DartQueryService(),
+    strings: strings,
   );
   controller
-    ..database = makeDefaultDatabase()
+    ..database = makeDefaultDatabase(strings)
     ..initialized = true;
   return controller;
 }

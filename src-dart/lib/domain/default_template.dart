@@ -1,6 +1,7 @@
+import '../localization/app_strings.dart';
 import 'models.dart';
 
-ObservationTemplate makeDemoTemplate() {
+ObservationTemplate makeDemoTemplate(AppStrings strings) {
   var nextValueId = 1;
   var nextAttributeId = 1;
 
@@ -14,36 +15,60 @@ ObservationTemplate makeDemoTemplate() {
       );
 
   final attributes = <ObservationAttribute>[
-    attribute('Comportamento', <String>[
-      'Lutas (murros, pontapés, deitar ao chão, empurrar, ...)',
-      'Lutas com componente simbólica (super heróis, bons e maus, ...)',
-      'Perseguição',
-      'Cócegas',
-      'Outra',
-      'N/A',
+    attribute(strings.text('default_attribute_behavior'), <String>[
+      strings.text('default_behavior_fights'),
+      strings.text('default_behavior_symbolic_fights'),
+      strings.text('default_behavior_chase'),
+      strings.text('default_behavior_tickling'),
+      strings.text('default_value_other_feminine'),
+      strings.text('default_value_not_applicable'),
     ]),
-    attribute('Afetividade', <String>['Negativa', 'Positiva', 'Neutra', 'N/A']),
-    attribute('Interação', <String>['Unilateral', 'Recíproca', 'Outra', 'N/A']),
-    attribute('Contacto', <String>['Sem contacto', 'Com contacto', 'N/A']),
-    attribute('Força', <String>[
-      'Pouca força',
-      'Força indiferenciada',
-      'Muita força',
-      'N/A',
+    attribute(strings.text('default_attribute_affectivity'), <String>[
+      strings.text('default_affectivity_negative'),
+      strings.text('default_affectivity_positive'),
+      strings.text('default_affectivity_neutral'),
+      strings.text('default_value_not_applicable'),
     ]),
-    attribute('Movimentos', <String>[
-      'Diretos',
-      'Curvilíneos',
-      'Outros',
-      'N/A',
+    attribute(strings.text('default_attribute_interaction'), <String>[
+      strings.text('default_interaction_unilateral'),
+      strings.text('default_interaction_reciprocal'),
+      strings.text('default_value_other_feminine'),
+      strings.text('default_value_not_applicable'),
     ]),
-    attribute('Pares', <String>['1', '2', '3 ou mais', 'N/A']),
-    attribute('Género', <String>['Mesmo', 'Oposto', 'Misto', 'N/A']),
+    attribute(strings.text('default_attribute_contact'), <String>[
+      strings.text('default_contact_without'),
+      strings.text('default_contact_with'),
+      strings.text('default_value_not_applicable'),
+    ]),
+    attribute(strings.text('default_attribute_force'), <String>[
+      strings.text('default_force_low'),
+      strings.text('default_force_unspecified'),
+      strings.text('default_force_high'),
+      strings.text('default_value_not_applicable'),
+    ]),
+    attribute(strings.text('default_attribute_movements'), <String>[
+      strings.text('default_movement_direct'),
+      strings.text('default_movement_curved'),
+      strings.text('default_value_other_masculine'),
+      strings.text('default_value_not_applicable'),
+    ]),
+    attribute(strings.text('default_attribute_pairs'), <String>[
+      strings.text('default_pairs_one'),
+      strings.text('default_pairs_two'),
+      strings.text('default_pairs_three_or_more'),
+      strings.text('default_value_not_applicable'),
+    ]),
+    attribute(strings.text('default_attribute_gender'), <String>[
+      strings.text('default_gender_same'),
+      strings.text('default_gender_opposite'),
+      strings.text('default_gender_mixed'),
+      strings.text('default_value_not_applicable'),
+    ]),
   ];
 
   return ObservationTemplate(
     id: 'fb52dd46-85cc-4864-b11e-44b8a5b28331',
-    name: 'Observação BLP',
+    name: strings.text('default_template_name'),
     intervalMs: 15000,
     nextAttributeId: nextAttributeId,
     nextValueId: nextValueId,
@@ -51,5 +76,5 @@ ObservationTemplate makeDemoTemplate() {
   );
 }
 
-Database makeDefaultDatabase() =>
-    Database(templates: <ObservationTemplate>[makeDemoTemplate()]);
+Database makeDefaultDatabase(AppStrings strings) =>
+    Database(templates: <ObservationTemplate>[makeDemoTemplate(strings)]);

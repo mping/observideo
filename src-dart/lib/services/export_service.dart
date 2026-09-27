@@ -3,10 +3,12 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:archive/archive_io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../domain/interval_model.dart';
 import '../domain/models.dart';
+import '../localization/app_strings.dart';
 import '../platform/native_platform_files.dart';
 import 'query_service.dart';
 
@@ -41,9 +43,10 @@ abstract interface class ExportService {
 }
 
 final class DartExportService implements ExportService {
-  DartExportService({PlatformFiles? platformFiles})
+  DartExportService({required this.strings, PlatformFiles? platformFiles})
     : _platformFiles = platformFiles ?? NativePlatformFiles();
 
+  final AppStrings strings;
   final PlatformFiles _platformFiles;
 
   static String csvEscapeField(String field) {
@@ -68,9 +71,9 @@ final class DartExportService implements ExportService {
       ..sort((left, right) => left.id.compareTo(right.id));
     final lines = <String>[
       csvLine(<String>[
-        'Interval',
-        'Start (s)',
-        'End (s)',
+        strings.text('csv_interval'),
+        strings.text('csv_start_seconds'),
+        strings.text('csv_end_seconds'),
         ...attributes.map((attribute) => attribute.name),
       ]),
     ];
@@ -109,7 +112,7 @@ final class DartExportService implements ExportService {
         .where((video) => !video.missing && video.annotation != null)
         .toList();
     if (exportable.isEmpty) {
-      return const ExportOutcome.failure('No annotated videos to export.');
+      return ExportOutcome.failure(strings.text('export_no_videos'));
     }
 
     final temporary = _temporaryPath(outputPath);
@@ -135,7 +138,8 @@ final class DartExportService implements ExportService {
       _platformFiles.atomicReplace(temporary, outputPath);
       return const ExportOutcome.success();
     } on Object catch (error) {
-      return ExportOutcome.failure(error.toString());
+      debugPrint('Falha ao exportar o arquivo ZIP: $error');
+      return ExportOutcome.failure(strings.text('export_failed'));
     } finally {
       final file = File(temporary);
       if (await file.exists()) await file.delete();
@@ -153,7 +157,12 @@ final class DartExportService implements ExportService {
       csvLine(topQueryRow),
       csvLine(bottomQueryRow),
       '',
-      csvLine(<String>['Video', 'Num', 'Den', 'Total']),
+      csvLine(<String>[
+        strings.text('csv_video'),
+        strings.text('csv_numerator'),
+        strings.text('csv_denominator'),
+        strings.text('csv_total'),
+      ]),
       ...rows.map(
         (row) => csvLine(<String>[
           row.name,
@@ -173,7 +182,8 @@ final class DartExportService implements ExportService {
       _platformFiles.atomicReplace(temporary, outputPath);
       return const ExportOutcome.success();
     } on Object catch (error) {
-      return ExportOutcome.failure(error.toString());
+      debugPrint('Falha ao exportar o ficheiro CSV: $error');
+      return ExportOutcome.failure(strings.text('export_failed'));
     } finally {
       final file = File(temporary);
       if (await file.exists()) await file.delete();
