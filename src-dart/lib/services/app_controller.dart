@@ -209,6 +209,31 @@ final class AppController extends ChangeNotifier {
     _changed();
   }
 
+  void updateTemplate(ObservationTemplate replacement) {
+    final template = database.findTemplate(replacement.id);
+    if (template == null) return;
+    final copy = ObservationTemplate.fromJson(replacement.toJson());
+    template
+      ..name = copy.name
+      ..intervalMs = max(1, copy.intervalMs)
+      ..nextAttributeId = copy.nextAttributeId
+      ..nextValueId = copy.nextValueId
+      ..attributes.clear()
+      ..attributes.addAll(copy.attributes);
+
+    for (final video in database.videos) {
+      final annotation = video.annotation;
+      if (annotation?.templateId != template.id) continue;
+      for (final interval in annotation!.intervals) {
+        interval.removeWhere((attributeId, valueId) {
+          final attribute = template.findAttribute(attributeId);
+          return attribute == null || attribute.findValue(valueId) == null;
+        });
+      }
+    }
+    _changed();
+  }
+
   int addAttribute(String templateId, String name) {
     final template = database.findTemplate(templateId);
     if (template == null) return 0;

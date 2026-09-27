@@ -88,6 +88,39 @@ void main() {
     expect(annotation.intervalMs, 15000);
     expect(annotation.intervals, hasLength(3));
   });
+
+  test('saving a template clears references removed from its draft', () {
+    final controller = _controller(strings);
+    addTearDown(controller.dispose);
+    final template = controller.database.templates.single;
+    final attribute = template.attributes.first;
+    final value = attribute.values.first;
+    controller.database.videos.add(
+      VideoRecord(
+        path: '/video.mp4',
+        durationMs: 1000,
+        annotation: Annotation(
+          templateId: template.id,
+          intervalMs: template.intervalMs,
+          intervals: <Interval>[
+            <int, int>{attribute.id: value.id},
+          ],
+        ),
+      ),
+    );
+    final draft = ObservationTemplate.fromJson(template.toJson());
+    draft
+        .findAttribute(attribute.id)!
+        .values
+        .removeWhere((item) => item.id == value.id);
+
+    controller.updateTemplate(draft);
+
+    expect(
+      controller.database.videos.single.annotation!.intervals.single,
+      isEmpty,
+    );
+  });
 }
 
 AppController _controller(AppStrings strings) {

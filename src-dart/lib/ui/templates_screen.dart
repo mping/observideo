@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../domain/models.dart';
 import '../localization/app_strings.dart';
@@ -17,16 +19,42 @@ final class TemplatesScreen extends StatefulWidget {
 
 final class _TemplatesScreenState extends State<TemplatesScreen> {
   String? selectedId;
+  ObservationTemplate? _draft;
+  String? _originalTemplate;
+  var _draftRevision = 0;
+  var _intervalIsValid = true;
+  var _intervalInputChanged = false;
+
+  bool get _hasChanges {
+    final draft = _draft;
+    return draft != null &&
+        (_intervalInputChanged ||
+            jsonEncode(draft.toJson()) != _originalTemplate);
+  }
+
+  void _loadDraft(ObservationTemplate template) {
+    _draft = ObservationTemplate.fromJson(template.toJson());
+    _originalTemplate = jsonEncode(template.toJson());
+    _intervalIsValid = true;
+    _intervalInputChanged = false;
+    _draftRevision++;
+  }
 
   @override
   Widget build(BuildContext context) {
     final templates = widget.controller.database.templates;
     if (templates.every((template) => template.id != selectedId)) {
       selectedId = templates.isEmpty ? null : templates.first.id;
+      _draft = null;
     }
-    final selected = selectedId == null
+    final storedTemplate = selectedId == null
         ? null
         : widget.controller.database.findTemplate(selectedId!);
+    if (storedTemplate != null && _draft?.id != storedTemplate.id) {
+      _loadDraft(storedTemplate);
+    }
+    final selected = _draft;
+    final hasChanges = _hasChanges;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -40,7 +68,7 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
               ),
               const Spacer(),
               FilledButton.icon(
-                onPressed: _addTemplate,
+                onPressed: hasChanges ? null : _addTemplate,
                 icon: const Icon(Icons.add),
                 label: Text(context.strings.text('templates_new')),
               ),
@@ -67,11 +95,26 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
                         .map(
                           (template) => DropdownMenuItem<String>(
                             value: template.id,
-                            child: Text(template.name),
+                            child: Text(
+                              template.id == selected.id
+                                  ? selected.name
+                                  : template.name,
+                            ),
                           ),
                         )
                         .toList(),
-                    onChanged: (value) => setState(() => selectedId = value),
+                    onChanged: hasChanges
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            final template = widget.controller.database
+                                .findTemplate(value);
+                            if (template == null) return;
+                            setState(() {
+                              selectedId = value;
+                              _loadDraft(template);
+                            });
+                          },
                   ),
                 ),
                 IconButton(
@@ -81,32 +124,24 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
                 ),
                 IconButton(
                   tooltip: context.strings.text('templates_delete'),
-                  onPressed: () => _deleteTemplate(selected),
+                  onPressed: hasChanges
+                      ? null
+                      : () => _deleteTemplate(selected),
                   icon: const Icon(Icons.delete_outline),
                 ),
                 const SizedBox(width: 16),
-                SizedBox(
-                  width: 190,
-                  child: TextFormField(
-                    key: ValueKey('${selected.id}-${selected.intervalMs}'),
-                    initialValue: (selected.intervalMs / 1000).toString(),
-                    decoration: InputDecoration(
-                      labelText: context.strings.text(
-                        'templates_interval_seconds',
-                      ),
-                      border: const OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onFieldSubmitted: (value) {
-                      final seconds = double.tryParse(value);
-                      if (seconds != null && seconds > 0) {
-                        widget.controller.setTemplateInterval(
-                          selected.id,
-                          (seconds * 1000).round(),
-                        );
-                      }
-                    },
+                _TemplateIntervalInput(
+                  key: ValueKey<String>(
+                    'template-interval-${selected.id}-$_draftRevision',
                   ),
+                  intervalMs: selected.intervalMs,
+                  onChanged: (intervalMs, inputChanged) {
+                    setState(() {
+                      _intervalIsValid = intervalMs != null;
+                      _intervalInputChanged = inputChanged;
+                      if (intervalMs != null) selected.intervalMs = intervalMs;
+                    });
+                  },
                 ),
               ],
             ),
@@ -132,9 +167,29 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
                     _TemplateAttributeTable(
                       controller: widget.controller,
                       template: selected,
+                      onChanged: () => setState(() {}),
                     ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                OutlinedButton(
+                  key: const ValueKey<String>('template-edit-cancel'),
+                  onPressed: hasChanges ? _cancelChanges : null,
+                  child: Text(context.strings.text('action_cancel')),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const ValueKey<String>('template-edit-save'),
+                  onPressed: hasChanges && _intervalIsValid
+                      ? _saveChanges
+                      : null,
+                  child: Text(context.strings.text('action_save')),
+                ),
+              ],
             ),
           ],
         ],
@@ -150,7 +205,11 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
     );
     if (name == null || name.trim().isEmpty) return;
     final id = widget.controller.addTemplate(name.trim(), 15000);
-    setState(() => selectedId = id);
+    final template = widget.controller.database.findTemplate(id);
+    setState(() {
+      selectedId = id;
+      if (template != null) _loadDraft(template);
+    });
   }
 
   Future<void> _renameTemplate(ObservationTemplate template) async {
@@ -161,7 +220,7 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
       initialValue: template.name,
     );
     if (name != null && name.trim().isNotEmpty) {
-      widget.controller.renameTemplate(template.id, name.trim());
+      setState(() => template.name = name.trim());
     }
   }
 
@@ -197,7 +256,13 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
         'name': template.name,
       }),
     );
-    if (confirmed) widget.controller.deleteTemplate(template.id);
+    if (confirmed) {
+      widget.controller.deleteTemplate(template.id);
+      setState(() {
+        selectedId = null;
+        _draft = null;
+      });
+    }
   }
 
   Future<void> _addAttribute(ObservationTemplate template) async {
@@ -207,8 +272,104 @@ final class _TemplatesScreenState extends State<TemplatesScreen> {
       context.strings.text('templates_attribute_name'),
     );
     if (name != null && name.trim().isNotEmpty) {
-      widget.controller.addAttribute(template.id, name.trim());
+      setState(() {
+        final id = template.nextAttributeId++;
+        template.attributes.add(
+          ObservationAttribute(id: id, name: name.trim()),
+        );
+      });
     }
+  }
+
+  void _cancelChanges() {
+    final template = selectedId == null
+        ? null
+        : widget.controller.database.findTemplate(selectedId!);
+    if (template == null) return;
+    setState(() => _loadDraft(template));
+    FocusScope.of(context).unfocus();
+  }
+
+  void _saveChanges() {
+    final draft = _draft;
+    if (draft == null || !_intervalIsValid) return;
+    widget.controller.updateTemplate(draft);
+    final saved = widget.controller.database.findTemplate(draft.id);
+    if (saved != null) setState(() => _loadDraft(saved));
+    FocusScope.of(context).unfocus();
+  }
+}
+
+final class _TemplateIntervalInput extends StatefulWidget {
+  const _TemplateIntervalInput({
+    required this.intervalMs,
+    required this.onChanged,
+    super.key,
+  });
+
+  final int intervalMs;
+  final void Function(int? intervalMs, bool inputChanged) onChanged;
+
+  @override
+  State<_TemplateIntervalInput> createState() => _TemplateIntervalInputState();
+}
+
+final class _TemplateIntervalInputState extends State<_TemplateIntervalInput> {
+  late final TextEditingController _controller;
+  late final String _initialText;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialText = _formatSeconds(widget.intervalMs);
+    _controller = TextEditingController(text: _initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int? get _intervalMs {
+    final seconds = double.tryParse(_controller.text.replaceAll(',', '.'));
+    if (seconds == null || !seconds.isFinite || seconds <= 0) return null;
+    final intervalMs = (seconds * 1000).round();
+    return intervalMs > 0 ? intervalMs : null;
+  }
+
+  static String _formatSeconds(int intervalMs) {
+    final seconds = intervalMs / 1000;
+    return seconds == seconds.truncateToDouble()
+        ? seconds.toInt().toString()
+        : seconds.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 190,
+      child: TextFormField(
+        key: const ValueKey<String>('template-interval-input'),
+        controller: _controller,
+        decoration: InputDecoration(
+          labelText: context.strings.text('templates_interval_seconds'),
+          border: const OutlineInputBorder(),
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+          TextInputFormatter.withFunction((oldValue, newValue) {
+            return RegExp(r'^\d*(?:[.,]\d*)?$').hasMatch(newValue.text)
+                ? newValue
+                : oldValue;
+          }),
+        ],
+        onChanged: (_) =>
+            widget.onChanged(_intervalMs, _controller.text != _initialText),
+        onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+      ),
+    );
   }
 }
 
@@ -216,10 +377,12 @@ final class _TemplateAttributeTable extends StatelessWidget {
   const _TemplateAttributeTable({
     required this.controller,
     required this.template,
+    required this.onChanged,
   });
 
   final AppController controller;
   final ObservationTemplate template;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +427,7 @@ final class _TemplateAttributeTable extends StatelessWidget {
                       template: template,
                       attribute: attribute,
                       value: attribute.values[row],
+                      onChanged: onChanged,
                     )
                   else
                     const SizedBox(height: 30),
@@ -291,7 +455,8 @@ final class _TemplateAttributeTable extends StatelessWidget {
       initialValue: attribute.name,
     );
     if (name != null && name.trim().isNotEmpty) {
-      controller.renameAttribute(template.id, attribute.id, name.trim());
+      attribute.name = name.trim();
+      onChanged();
     }
   }
 
@@ -310,7 +475,10 @@ final class _TemplateAttributeTable extends StatelessWidget {
             <String, Object>{'count': usage},
           ),
         );
-    if (confirmed) controller.deleteAttribute(template.id, attribute.id);
+    if (confirmed) {
+      template.attributes.removeWhere((item) => item.id == attribute.id);
+      onChanged();
+    }
   }
 
   Future<void> _addValue(
@@ -323,7 +491,9 @@ final class _TemplateAttributeTable extends StatelessWidget {
       context.strings.text('templates_value_name'),
     );
     if (name != null && name.trim().isNotEmpty) {
-      controller.addValue(template.id, attribute.id, name.trim());
+      final id = template.nextValueId++;
+      attribute.values.add(ObservationValue(id: id, name: name.trim()));
+      onChanged();
     }
   }
 }
@@ -439,6 +609,7 @@ final class _EditableValueCell extends StatelessWidget {
     required this.template,
     required this.attribute,
     required this.value,
+    required this.onChanged,
     super.key,
   });
 
@@ -446,6 +617,7 @@ final class _EditableValueCell extends StatelessWidget {
   final ObservationTemplate template;
   final ObservationAttribute attribute;
   final ObservationValue value;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -489,7 +661,8 @@ final class _EditableValueCell extends StatelessWidget {
       initialValue: value.name,
     );
     if (name != null && name.trim().isNotEmpty) {
-      controller.renameValue(template.id, attribute.id, value.id, name.trim());
+      value.name = name.trim();
+      onChanged();
     }
   }
 
@@ -509,7 +682,10 @@ final class _EditableValueCell extends StatelessWidget {
             <String, Object>{'count': usage},
           ),
         );
-    if (confirmed) controller.deleteValue(template.id, attribute.id, value.id);
+    if (confirmed) {
+      attribute.values.removeWhere((item) => item.id == value.id);
+      onChanged();
+    }
   }
 }
 

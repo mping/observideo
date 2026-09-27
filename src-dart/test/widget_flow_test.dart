@@ -47,7 +47,12 @@ void main() {
     await tester.tap(find.text(strings.text('templates_new')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Field study');
-    await tester.tap(find.text(strings.text('action_save')));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(strings.text('action_save')),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -132,6 +137,101 @@ void main() {
       expect(find.byType(InputChip), findsNothing);
     },
   );
+
+  testWidgets('template edits are filtered, cancellable, and saved together', (
+    tester,
+  ) async {
+    final controller = _controller(strings);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      ObservideoApp(controller: controller, strings: strings),
+    );
+    await tester.tap(find.byIcon(Icons.view_list_outlined));
+    await tester.pumpAndSettle();
+
+    final template = controller.database.templates.first;
+    final intervalInput = find.byKey(
+      const ValueKey<String>('template-interval-input'),
+    );
+    final cancelButton = find.byKey(
+      const ValueKey<String>('template-edit-cancel'),
+    );
+    final saveButton = find.byKey(const ValueKey<String>('template-edit-save'));
+
+    await tester.enterText(intervalInput, '12 seconds');
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      '12',
+    );
+    expect(template.intervalMs, 15000);
+
+    await tester.tap(cancelButton);
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      '15',
+    );
+    expect(template.intervalMs, 15000);
+
+    final originalName = template.name;
+    await tester.tap(find.byTooltip(strings.text('templates_rename')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      'Discarded model',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(strings.text('action_save')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(template.name, originalName);
+    expect(find.text('Discarded model'), findsOneWidget);
+
+    await tester.tap(cancelButton);
+    await tester.pump();
+    expect(template.name, originalName);
+    expect(find.text('Discarded model'), findsNothing);
+
+    await tester.tap(find.byTooltip(strings.text('templates_rename')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      'Updated model',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(strings.text('action_save')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(template.name, originalName);
+
+    await tester.enterText(intervalInput, '2,5');
+    await tester.pump();
+    await tester.tap(saveButton);
+    await tester.pump();
+    expect(controller.database.findTemplate(template.id)!.intervalMs, 2500);
+    expect(
+      controller.database.findTemplate(template.id)!.name,
+      'Updated model',
+    );
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      '2.5',
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+  });
 
   testWidgets('annotation values use the original clickable column table', (
     tester,
