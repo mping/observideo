@@ -94,7 +94,11 @@ Future<void> verifyPlayback(WidgetTester tester, String path) async {
 
   final backend = MediaKitPlaybackBackend();
   addTearDown(backend.dispose);
-  await backend.open(path);
+  // VideoController defers native setup to a post-frame callback, and
+  // Player.open waits for it, so a frame must be pumped before awaiting.
+  final opening = backend.open(path);
+  await tester.pump();
+  await opening;
   await backend.play();
   await tester.pump(const Duration(seconds: 2));
   await backend.pause();

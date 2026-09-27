@@ -31,6 +31,14 @@ final class MediaRuntime {
       if (candidates.isNotEmpty) return candidates.first.path;
       return p.join(root, 'lib', 'libmpv.dylib');
     }
+    // media_kit_video links the bundled copy; loading a second copy from the
+    // media root gives Dart a handle whose globals the plugin can't see.
+    final bundled = p.join(
+      File(Platform.resolvedExecutable).parent.path,
+      'lib',
+      'libmpv.so.2',
+    );
+    if (File(bundled).existsSync()) return bundled;
     return p.join(root, 'lib', 'libmpv.so');
   }
 
