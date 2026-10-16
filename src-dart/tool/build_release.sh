@@ -39,4 +39,12 @@ fi
 mkdir -p "$packaged_media/bin" "$packaged_media/lib" "$packaged_media/share"
 cp "$media_root/bin/ffprobe" "$packaged_media/bin/"
 cp -R "$media_root/lib/." "$packaged_media/lib/"
-cp -R "$media_root/share/." "$packaged_media/share/"
+if [ "$platform" = macos ]; then
+  # Keep the manifest and build reports. Avoid copying shell completion
+  # directories into the app, which codesign treats as bundles.
+  rm -rf "$packaged_media/share"
+  mkdir -p "$packaged_media/share/observideo"
+  cp -R "$media_root/share/observideo/." "$packaged_media/share/observideo/"
+else
+  cp -R "$media_root/share/." "$packaged_media/share/"
+fi

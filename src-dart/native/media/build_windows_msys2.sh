@@ -47,6 +47,16 @@ mkdir -p "$prefix/angle/include" "$prefix/angle/lib" "$prefix/bin"
 cp -R /mingw64/include/EGL "$prefix/angle/include/"
 cp -R /mingw64/include/GLES2 "$prefix/angle/include/"
 cp -R /mingw64/include/KHR "$prefix/angle/include/"
+# MSYS2 ships the generic EGL registry header separately from ANGLE's
+# extension header. media_kit_video includes only EGL/eglext.h.
+cat >> "$prefix/angle/include/EGL/eglext.h" <<'EOF'
+
+#include <EGL/eglext_angle.h>
+/* media_kit_video still names the D3D9 fallback removed from newer ANGLE. */
+#ifndef EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE
+#define EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE 0x3207
+#endif
+EOF
 cp /mingw64/bin/libEGL.dll /mingw64/bin/libGLESv2.dll "$prefix/bin/"
 for library in libEGL libGLESv2; do
   cd "$prefix/angle/lib"

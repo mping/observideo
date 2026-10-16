@@ -20,6 +20,8 @@ $Required = @(
   'include\mpv\render_gl.h',
   'lib\libmpv.dll.a',
   'angle\include\EGL\egl.h',
+  'angle\include\EGL\eglext.h',
+  'angle\include\EGL\eglext_angle.h',
   'angle\include\GLES2\gl2.h',
   'angle\include\KHR\khrplatform.h',
   'angle\lib\libEGL.dll.lib',
