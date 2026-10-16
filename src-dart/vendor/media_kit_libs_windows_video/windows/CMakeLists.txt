@@ -18,7 +18,8 @@ if(NOT EXISTS "${MEDIA_ROOT}/angle/lib/libEGL.dll.lib")
 endif()
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/libmpv")
-file(COPY "${MEDIA_ROOT}/include/" DESTINATION "${CMAKE_BINARY_DIR}/libmpv/include")
+# media_kit_video includes <client.h>, <render.h>, and <render_gl.h> directly.
+file(COPY "${MEDIA_ROOT}/include/mpv/" DESTINATION "${CMAKE_BINARY_DIR}/libmpv/include")
 file(COPY "${MEDIA_ROOT}/lib/libmpv.dll.a" DESTINATION "${CMAKE_BINARY_DIR}/libmpv")
 file(COPY "${MEDIA_ROOT}/angle/" DESTINATION "${CMAKE_BINARY_DIR}/ANGLE")
 

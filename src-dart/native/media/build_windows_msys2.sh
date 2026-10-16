@@ -46,6 +46,7 @@ meson install -C build
 mkdir -p "$prefix/angle/include" "$prefix/angle/lib" "$prefix/bin"
 cp -R /mingw64/include/EGL "$prefix/angle/include/"
 cp -R /mingw64/include/GLES2 "$prefix/angle/include/"
+cp -R /mingw64/include/KHR "$prefix/angle/include/"
 cp /mingw64/bin/libEGL.dll /mingw64/bin/libGLESv2.dll "$prefix/bin/"
 for library in libEGL libGLESv2; do
   cd "$prefix/angle/lib"

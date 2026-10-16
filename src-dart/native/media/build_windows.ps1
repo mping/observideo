@@ -16,8 +16,12 @@ $Required = @(
   'bin\libEGL.dll',
   'bin\libGLESv2.dll',
   'include\mpv\client.h',
+  'include\mpv\render.h',
+  'include\mpv\render_gl.h',
   'lib\libmpv.dll.a',
   'angle\include\EGL\egl.h',
+  'angle\include\GLES2\gl2.h',
+  'angle\include\KHR\khrplatform.h',
   'angle\lib\libEGL.dll.lib',
   'angle\lib\libGLESv2.dll.lib',
   'share\observideo\codec-manifest.json'

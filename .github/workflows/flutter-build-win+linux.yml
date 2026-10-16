@@ -134,6 +134,7 @@ jobs:
             nasm
             mingw-w64-x86_64-angleproject
             mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-headers
             mingw-w64-x86_64-libass
             mingw-w64-x86_64-libplacebo
             mingw-w64-x86_64-meson
