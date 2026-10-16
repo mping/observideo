@@ -16,7 +16,12 @@
 
  ;; set an nrepl port for connection to a REPL.
  :nrepl        {:port 8777}
- :builds       {:main     {:target    :node-script
+ :builds       {;; TEMPORARY -- remove this build once scratch_verify.cljs is deleted.
+                :verify   {:target    :node-script
+                           :output-to "target/scratch-verify.js"
+                           :main      observideo.scratch-verify/main}
+
+                :main     {:target    :node-script
                            :output-to "resources/main.js"
                            :main      observideo.main.core/main}
 

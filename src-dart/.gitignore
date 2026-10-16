@@ -1,0 +1,20 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+coverage/
+.idea/
+*.iml
+
+# Generated Flutter desktop state
+linux/flutter/ephemeral/
+macos/Flutter/ephemeral/
+macos/Pods/
+windows/flutter/ephemeral/
+
+# Controlled media build and staging output
+native/media/cache/
+native/media/out/
+vendor/media_kit_libs_macos_video/macos/Frameworks/
+vendor/media_kit_libs_macos_video/macos/Libraries/

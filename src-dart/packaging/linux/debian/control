@@ -1,0 +1,10 @@
+Package: observideo
+Version: 0.4.0
+Section: video
+Priority: optional
+Architecture: amd64
+Maintainer: Observideo maintainers
+Depends: libgtk-3-0, libepoxy0
+Description: Interval-based desktop video annotation
+ Observideo scans local videos, applies reusable annotation templates, and
+ exports annotations and query results as RFC 4180 CSV files.

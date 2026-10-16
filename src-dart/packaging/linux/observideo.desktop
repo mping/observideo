@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Observideo
+Comment=Interval-based video annotation
+Exec=observideo
+Icon=observideo
+Categories=AudioVideo;Education;
+Terminal=false
+

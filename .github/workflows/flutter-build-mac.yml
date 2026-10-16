@@ -1,0 +1,81 @@
+name: Build/release Flutter macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, gh-updates]
+    tags: ['v*']
+    paths:
+      - 'src-dart/**'
+      - '.github/workflows/flutter-build-mac.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: src-dart
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter 3.47.3
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.3
+          channel: stable
+          architecture: arm64
+          cache: true
+
+      - name: Install native build dependencies
+        run: brew install meson ninja pkg-config nasm libass libplacebo
+
+      - name: Cache controlled media build
+        uses: actions/cache@v6
+        with:
+          path: |
+            src-dart/native/media/cache
+            src-dart/native/media/out
+          key: macos-arm64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build FFmpeg and libmpv
+        run: ./native/media/build_unix.sh
+
+      - name: Build Flutter application
+        run: ./tool/build_release.sh
+
+      - name: Create ad hoc-signed DMG
+        run: |
+          app=build/macos/Build/Products/Release/observideo.app
+          codesign --force --deep --sign - "$app"
+          hdiutil create \
+            -volname Observideo \
+            -srcfolder "$app" \
+            -ov \
+            -format UDZO \
+            build/Observideo-flutter-macos-arm64.dmg
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Observideo-flutter-macos-arm64
+          path: src-dart/build/Observideo-flutter-macos-arm64.dmg
+          if-no-files-found: error
+
+      - name: Attach artifact to tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: src-dart/build/Observideo-flutter-macos-arm64.dmg
+          generate_release_notes: true

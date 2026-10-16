@@ -47,12 +47,16 @@
   (assoc video "md5sum" (.sync md5 filename)))
 
 (defn db-info [video]
-  (merge video {"missing" false
-                "info"    {:a "changeme"}}))
+  ;; Note: no "missing" key here. The renderer's videos-merge (events.cljs)
+  ;; is what actually determines a video's missing-ness and stores it
+  ;; under :missing? -- a redundant "missing" key here just meant every
+  ;; video map carried both :missing and :missing?, with only the latter
+  ;; ever read anywhere.
+  (merge video {"info" {:a "changeme"}}))
 
 (defn filter-keys [video]
   (-> video
-    (select-keys ["filename" "size" "duration" "info" "md5sum" "missing"])
+    (select-keys ["filename" "size" "duration" "info" "md5sum"])
     (walk/keywordize-keys)))
 
 (defn read-metadata [path]

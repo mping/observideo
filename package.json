@@ -3,7 +3,7 @@
   "homepage": "https://observideo.com",
   "version": "0.3.0",
   "description": "Observideo is an app for categorizing video segments",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "main": "resources/main.js",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",

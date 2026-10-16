@@ -1,0 +1,150 @@
+app_title: Observideo
+startup_failure_title: Não foi possível iniciar o Observideo
+startup_failure_message: Verifique a instalação dos componentes multimédia e tente novamente.
+
+action_cancel: Cancelar
+action_save: Guardar
+action_continue: Continuar
+action_close: Fechar
+action_dismiss: Fechar
+action_none: Nenhum
+action_any: Qualquer
+
+navigation_videos: Vídeos
+navigation_templates: Modelos
+navigation_queries: Consultas
+navigation_export: Exportar
+
+videos_title: Vídeos
+videos_folder_prompt: Escolha uma pasta com ficheiros MP4, AVI ou WebM.
+videos_scanning: A analisar…
+videos_choose_folder: Escolher pasta
+videos_empty: Ainda não foram encontrados vídeos.
+videos_missing: Em falta
+videos_previous_interval: Utiliza a duração anterior do intervalo
+videos_template_label: Modelo
+videos_annotate: Anotar
+videos_clear_annotations_title: Limpar as anotações existentes?
+videos_clear_annotations_message: Alterar ou remover o modelo elimina permanentemente as anotações dos intervalos deste vídeo.
+videos_clear_and_continue: Limpar e continuar
+
+editor_previous_interval: Intervalo anterior
+editor_pause: Pausar
+editor_play: Reproduzir
+editor_replay_interval: Repetir intervalo
+editor_next_interval: Intervalo seguinte
+editor_interval_position: Intervalo {current} de {total}
+editor_seconds: "{value} s"
+editor_time_position: "{current} / {total}"
+editor_time_range: "{start}–{end}"
+annotation_no_attributes: Este modelo não tem atributos.
+
+default_template_name: Observação BLP
+default_attribute_behavior: Comportamento
+default_behavior_fights: Lutas (murros, pontapés, deitar ao chão, empurrar, ...)
+default_behavior_symbolic_fights: Lutas com componente simbólica (super-heróis, bons e maus, ...)
+default_behavior_chase: Perseguição
+default_behavior_tickling: Cócegas
+default_value_other_feminine: Outra
+default_value_not_applicable: N/A
+default_attribute_affectivity: Afetividade
+default_affectivity_negative: Negativa
+default_affectivity_positive: Positiva
+default_affectivity_neutral: Neutra
+default_attribute_interaction: Interação
+default_interaction_unilateral: Unilateral
+default_interaction_reciprocal: Recíproca
+default_attribute_contact: Contacto
+default_contact_without: Sem contacto
+default_contact_with: Com contacto
+default_attribute_force: Força
+default_force_low: Pouca força
+default_force_unspecified: Força indiferenciada
+default_force_high: Muita força
+default_attribute_movements: Movimentos
+default_movement_direct: Diretos
+default_movement_curved: Curvilíneos
+default_value_other_masculine: Outros
+default_attribute_pairs: Pares
+default_pairs_one: "1"
+default_pairs_two: "2"
+default_pairs_three_or_more: 3 ou mais
+default_attribute_gender: Género
+default_gender_same: Mesmo
+default_gender_opposite: Oposto
+default_gender_mixed: Misto
+
+templates_title: Modelos
+templates_new: Novo modelo
+templates_empty: Não existem modelos.
+templates_label: Modelo
+templates_rename: Mudar o nome do modelo
+templates_delete: Eliminar modelo
+templates_interval_seconds: Intervalo (segundos)
+templates_add_attribute: Adicionar atributo
+templates_new_title: Novo modelo
+templates_name_label: Nome do modelo
+templates_rename_title: Mudar o nome do modelo
+templates_in_use_title: O modelo está a ser utilizado
+templates_in_use_message: "Remova primeiro o modelo destes vídeos:\n\n{videos}"
+templates_delete_title: Eliminar modelo?
+templates_delete_message: Eliminar «{name}»? Esta ação não pode ser anulada.
+templates_add_attribute_title: Adicionar atributo
+templates_attribute_name: Nome
+templates_rename_attribute: Mudar o nome do atributo
+templates_delete_attribute: Eliminar atributo
+templates_delete_attribute_title: Eliminar atributo?
+templates_delete_attribute_message: Este atributo é utilizado em {count} intervalos anotados. A sua eliminação limpa essas seleções.
+templates_add_value: Adicionar opção
+templates_add_value_title: Adicionar opção
+templates_value_name: Nome
+templates_rename_value: Mudar o nome da opção
+templates_delete_value: Eliminar opção
+templates_delete_value_title: Eliminar opção?
+templates_delete_value_message: Esta opção é utilizada em {count} intervalos anotados. A sua eliminação limpa essas seleções.
+
+queries_title: Consultas
+queries_create_template: Crie primeiro um modelo.
+queries_per_video: Por vídeo
+queries_group_prefix: Agrupar pelo prefixo de 8 caracteres
+queries_numerator: Numerador
+queries_denominator: Denominador
+queries_results: Resultados
+queries_run: Executar consulta
+queries_export_csv: Exportar CSV
+queries_no_matches: Não existem correspondências positivas.
+queries_result_count: "{top} / {bottom} (total {total})"
+queries_exported: Consulta exportada.
+queries_selection: "{attribute}: {value}"
+queries_file_name: observideo-consulta.csv
+queries_file_type: CSV
+
+export_title: Exportar
+export_annotated_videos: Vídeos anotados
+export_summary: Serão gravados {count} vídeos num ficheiro ZIP, com um ficheiro CSV RFC 4180 por vídeo.
+export_value_names: Nomes das opções
+export_one_based_indexes: Índices a partir de 1
+export_in_progress: A exportar…
+export_zip: Exportar ZIP
+export_file_name: observideo-anotacoes.zip
+export_file_type: Ficheiro ZIP
+export_complete: Exportação concluída.
+export_no_videos: Não existem vídeos anotados para exportar.
+export_failed: Não foi possível concluir a exportação.
+
+csv_interval: Intervalo
+csv_start_seconds: Início (s)
+csv_end_seconds: Fim (s)
+csv_video: Vídeo
+csv_numerator: Num.
+csv_denominator: Den.
+csv_total: Total
+
+error_open_data: Não foi possível abrir os dados da aplicação.
+error_scan_videos: Não foi possível analisar os vídeos.
+error_video_template_not_found: O vídeo ou o modelo não foi encontrado.
+error_video_duration_unknown: A duração do vídeo é desconhecida.
+error_save: Não foi possível guardar os dados.
+error_hardware_decoding: A descodificação por hardware falhou; está a ser utilizada a descodificação por software.
+error_software_decoding: A descodificação por software também falhou.
+error_playback: Ocorreu um erro durante a reprodução do vídeo.

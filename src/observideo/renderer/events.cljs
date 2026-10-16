@@ -2,6 +2,7 @@
   (:require
    [re-frame.core :as rf]
    ;[day8.re-frame.tracing :refer-macros [fn-traced]]
+   [taoensso.timbre :as log]
    [observideo.common.datamodel :as datamodel]
    [observideo.renderer.interceptors :as interceptors]))
 
@@ -88,19 +89,6 @@
 ;;;;
 ;; video editing
 
-(defn- count-observations [duration step-interval]
-  (+ (int (/ duration step-interval))
-    (if (> (mod duration step-interval) 0) 1 0)))
-
-(defn- make-empty-observations [template n]
-  (->> (range)
-    (take n)
-    (map (fn [_]
-           (let [attrs (:attributes template)]
-             ;; create a mapping {"name" => nil}
-             (reduce-kv (fn [m k _] (assoc m (str k) nil)) {} attrs))))
-    (vec)))
-
 (rf/reg-event-db
   :ui/update-current-video-template
   [interceptors/queue-save-db]
@@ -108,8 +96,8 @@
     (let [current-video      (:videos/current db)
           template           (get-in db [:templates/all id])
           template-interval  (:interval template)
-          total-observations (count-observations (:duration current-video) template-interval)
-          new-observations   (make-empty-observations template total-observations)
+          total-observations (datamodel/count-observations (:duration current-video) template-interval)
+          new-observations   (datamodel/make-empty-observations template total-observations)
           updated-video      (assoc current-video :template-id id :observations new-observations)
           fullpath           (:filename updated-video)]
       (-> db
@@ -160,8 +148,11 @@
   :ui/update-template
   [interceptors/queue-save-db]
   (fn [db [_ {:keys [id] :as template}]]
-    (-> db
-      (assoc-in [:templates/all id] template))))
+    (let [old-template  (get-in db [:templates/all id])
+          videos'       (datamodel/reconcile-videos-for-template old-template template (:videos/all db))]
+      (-> db
+        (assoc-in [:templates/all id] template)
+        (assoc :videos/all videos')))))
 
 (rf/reg-event-db
   :ui/update-current-template
@@ -174,9 +165,24 @@
   :ui/delete-template
   [interceptors/queue-save-db]
   (fn [db [_ template]]
-    (let [id (:id template)]
-      (-> db
-        (dissoc :templates/all id)))))
+    (let [id           (:id template)
+          videos       (vals (:videos/all db))
+          in-use-count (->> videos (filter #(= id (:template-id %))) count)]
+      (if (pos? in-use-count)
+        ;; Defensive backstop: the Templates screen already blocks this
+        ;; (see templates.cljs delete-template!), which is where the user
+        ;; sees why. Refusing here too means a template can never end up
+        ;; deleted out from under a video's :template-id no matter what
+        ;; dispatches this event.
+        (do
+          (log/warnf "Refusing to delete template '%s': still used by %s video(s)" id in-use-count)
+          db)
+        ;; `(dissoc db :templates/all id)` was the bug: dissoc'ing
+        ;; *two keys off the top-level db* -- :templates/all (wiping every
+        ;; template) and a nonexistent top-level key literally named by
+        ;; the id string (a no-op) -- instead of removing just `id` from
+        ;; the nested :templates/all map.
+        (update db :templates/all dissoc id)))))
 
 (rf/reg-event-db
   :ui/deselect-template
