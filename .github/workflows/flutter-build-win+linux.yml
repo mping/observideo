@@ -172,10 +172,16 @@ jobs:
           Compress-Archive `
             -Path build\windows\x64\runner\Release\* `
             -DestinationPath build\Observideo-flutter-windows-x64.zip
-          choco install nsis --no-progress -y
+          $makensis = (Get-Command makensis.exe -ErrorAction SilentlyContinue).Source
+          if (-not $makensis) {
+            $makensis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
+          }
+          if (-not (Test-Path -LiteralPath $makensis -PathType Leaf)) {
+            throw "NSIS makensis.exe was not found on the Windows runner."
+          }
           Push-Location packaging\windows
           try {
-            & "$env:ChocolateyInstall\bin\makensis.exe" installer.nsi
+            & $makensis installer.nsi
           } finally {
             Pop-Location
           }
