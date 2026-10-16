@@ -20,6 +20,12 @@ test -f "$media_root/share/observideo/codec-manifest.json"
 
 cd "$project_dir"
 OBSERVIDEO_MEDIA_ROOT="$media_root" ./tool/stage_media.sh
+# The controlled macOS media build contains only the host architecture.
+# Flutter's release default is universal, so select its arm64-only build on
+# Apple Silicon before linking the staged Mpv.framework.
+if [ "$platform" = macos ] && [ "$arch" = arm64 ]; then
+  export FLUTTER_MACOS_ARM64_ONLY=true
+fi
 PKG_CONFIG_PATH="$media_root/lib/pkgconfig:${PKG_CONFIG_PATH:-}" \
   OBSERVIDEO_MEDIA_ROOT="$media_root" flutter build "$platform" --release
 
