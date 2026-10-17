@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observideo/domain/default_template.dart';
 import 'package:observideo/domain/models.dart';
 import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/services/app_controller.dart';
+import 'package:observideo/services/app_log.dart';
 import 'package:observideo/services/export_service.dart';
 import 'package:observideo/services/media_probe.dart';
 import 'package:observideo/services/query_service.dart';
@@ -121,11 +124,34 @@ void main() {
       isEmpty,
     );
   });
+
+  test('saves are logged', () async {
+    final controller = _controller(strings);
+    addTearDown(controller.dispose);
+    final before = AppLog.instance.entries.length;
+    await controller.flushSave();
+
+    final entry = AppLog.instance.entries.skip(before).single;
+    expect(entry.level, LogLevel.info);
+    expect(entry.message, startsWith('Dados guardados (0 vídeos, 1 modelos'));
+  });
+
+  test('a failing save is logged and reported instead of thrown', () async {
+    final controller = _controller(strings, store: _FailingStateStore());
+    addTearDown(controller.dispose);
+    final before = AppLog.instance.entries.length;
+    await controller.flushSave();
+
+    expect(controller.error, strings.text('error_save'));
+    final entry = AppLog.instance.entries.skip(before).single;
+    expect(entry.level, LogLevel.error);
+    expect(entry.message, contains('disco cheio'));
+  });
 }
 
-AppController _controller(AppStrings strings) {
+AppController _controller(AppStrings strings, {StateStore? store}) {
   final controller = AppController(
-    store: _MemoryStateStore(),
+    store: store ?? _MemoryStateStore(),
     scanner: VideoScanner(const _NoProbe()),
     exportService: DartExportService(strings: strings),
     queryService: const DartQueryService(),
@@ -148,6 +174,20 @@ final class _MemoryStateStore implements StateStore {
   Future<Database?> load() async => null;
   @override
   Future<List<String>> save(Database database) async => const <String>[];
+}
+
+final class _FailingStateStore implements StateStore {
+  @override
+  String get filePath => 'failing';
+  @override
+  Future<void> acquireLock() async {}
+  @override
+  Future<void> close() async {}
+  @override
+  Future<Database?> load() async => null;
+  @override
+  Future<List<String>> save(Database database) async =>
+      throw const FileSystemException('disco cheio');
 }
 
 final class _NoProbe implements MediaProbe {

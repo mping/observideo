@@ -7,6 +7,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../domain/interval_model.dart';
 import '../localization/app_strings.dart';
+import 'app_log.dart';
 
 abstract interface class PlaybackBackend {
   Stream<int> get positionChanges;
@@ -55,12 +56,21 @@ final class MediaKitPlaybackBackend implements PlaybackBackend {
   final errorOutput = StreamController<String>.broadcast();
   final videoController = ValueNotifier<VideoController?>(null);
   final _subscriptions = <StreamSubscription<Object?>>[];
+  final _log = AppLog.instance;
   late Player _player;
 
   void _createPlayer({required bool hardware}) {
-    _player = Player();
+    // mpv only forwards errors by default; its warnings (devices, codecs,
+    // A/V sync) are worth having in the diagnostics log too.
+    final player = _player = Player(
+      configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn),
+    );
+    _log.info(
+      'reprodução',
+      'Leitor criado (aceleração por hardware: ${hardware ? 'sim' : 'não'})',
+    );
     videoController.value = VideoController(
-      _player,
+      player,
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: hardware,
         hwdec: hardware ? 'auto-safe' : 'no',
@@ -68,13 +78,75 @@ final class MediaKitPlaybackBackend implements PlaybackBackend {
     );
     _subscriptions
       ..add(
-        _player.stream.position.listen(
+        player.stream.position.listen(
           (value) => positionOutput.add(value.inMilliseconds),
         ),
       )
-      ..add(_player.stream.playing.listen(playingOutput.add))
-      ..add(_player.stream.completed.listen(completedOutput.add))
-      ..add(_player.stream.error.listen(errorOutput.add));
+      ..add(player.stream.playing.listen(playingOutput.add))
+      ..add(player.stream.completed.listen(completedOutput.add))
+      ..add(player.stream.error.listen(errorOutput.add))
+      ..add(player.stream.log.listen(_logMpv))
+      ..add(
+        player.stream.videoParams
+            .where((params) => params.w != null)
+            .distinct((left, right) => left.w == right.w && left.h == right.h)
+            .listen(
+              (params) => _log.info(
+                'reprodução',
+                'Vídeo ${params.w}x${params.h} (${params.pixelformat})',
+              ),
+            ),
+      );
+    final native = player.platform;
+    if (native is NativePlayer) {
+      unawaited(_observe(native, 'video-codec', 'Codec de vídeo'));
+      unawaited(
+        _observe(native, 'hwdec-current', 'Descodificação por hardware'),
+      );
+      unawaited(_observe(native, 'current-ao', 'Saída de áudio'));
+    }
+  }
+
+  // media_kit sets the Lua-only 'osc' option, asks for a disk cache without a
+  // cache directory and opens files through a playlist. mpv complains about
+  // each on every file even though playback is unaffected.
+  static const _expectedMpvMessages = <String>[
+    '_setProperty(osc,',
+    'Failed to create file cache.',
+    'Reading plaintext playlist.',
+  ];
+
+  void _logMpv(PlayerLog entry) {
+    final message = '[${entry.prefix}] ${entry.text}';
+    if (_expectedMpvMessages.any(entry.text.contains)) {
+      _log.info('mpv', message);
+      return;
+    }
+    switch (entry.level) {
+      case 'fatal' || 'error':
+        _log.error('mpv', message);
+      case 'warn':
+        _log.warning('mpv', message);
+      default:
+        _log.info('mpv', message);
+    }
+  }
+
+  Future<void> _observe(
+    NativePlayer player,
+    String property,
+    String label,
+  ) async {
+    String? last;
+    try {
+      await player.observeProperty(property, (value) async {
+        if (value == last) return;
+        last = value;
+        _log.info('reprodução', '$label: $value');
+      });
+    } on Object {
+      // The player was disposed before it finished initializing.
+    }
   }
 
   @override
@@ -91,8 +163,11 @@ final class MediaKitPlaybackBackend implements PlaybackBackend {
   bool get isPlaying => _player.state.playing;
 
   @override
-  Future<void> open(String path) =>
-      _player.open(Media(File(path).uri.toString()), play: false);
+  Future<void> open(String path) {
+    _log.info('reprodução', 'A abrir $path');
+    return _player.open(Media(File(path).uri.toString()), play: false);
+  }
+
   @override
   Future<void> play() => _player.play();
   @override
@@ -123,6 +198,7 @@ final class MediaKitPlaybackBackend implements PlaybackBackend {
     }
     _subscriptions.clear();
     await _player.dispose();
+    _log.info('reprodução', 'Leitor fechado');
     videoController.dispose();
     await positionOutput.close();
     await playingOutput.close();
@@ -151,6 +227,7 @@ final class MediaKitPlaybackController extends ChangeNotifier
   }
 
   final PlaybackBackend backend;
+  final _log = AppLog.instance;
   final AppStrings strings;
   final ValueChanged<int>? onSelectedChanged;
   final ValueChanged<int>? onIntervalCompleted;
@@ -298,16 +375,30 @@ final class MediaKitPlaybackController extends ChangeNotifier
   }
 
   void _handleError(String message) {
-    debugPrint('Erro de reprodução: $message');
+    // mpv keeps playing the video without sound when no audio output opens;
+    // software decoding cannot fix that, so report it without the fallback.
+    if (message.startsWith('Could not open/initialize audio device')) {
+      _log.warning('reprodução', 'Sem dispositivo de áudio: $message');
+      _error = strings.text('error_audio_device');
+      notifyListeners();
+      return;
+    }
+    _log.error('reprodução', 'Erro de reprodução: $message');
     final path = _path;
     if (!_softwareFallbackAttempted && path != null) {
       _softwareFallbackAttempted = true;
+      _log.warning('reprodução', 'A tentar a descodificação por software');
       unawaited(() async {
         try {
           await backend.useSoftwareDecoding(path, _positionMs);
           _error = strings.text('error_hardware_decoding');
-        } on Object catch (fallbackError) {
-          debugPrint('Falha da descodificação por software: $fallbackError');
+        } on Object catch (fallbackError, stackTrace) {
+          _log.error(
+            'reprodução',
+            'Falha da descodificação por software',
+            fallbackError,
+            stackTrace,
+          );
           _error = strings.text('error_software_decoding');
         }
         notifyListeners();

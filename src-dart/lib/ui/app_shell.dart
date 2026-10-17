@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../localization/app_strings.dart';
 import '../services/app_controller.dart';
+import '../services/app_log.dart';
+import 'diagnostics_screen.dart';
 import 'export_screen.dart';
 import 'queries_screen.dart';
 import 'templates_screen.dart';
@@ -56,6 +58,20 @@ final class _AppShellState extends State<AppShell> {
                     leading: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Icon(Icons.video_camera_back, size: 32),
+                    ),
+                    trailingAtBottom: true,
+                    trailing: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: IconButton(
+                        tooltip: context.strings.text('navigation_diagnostics'),
+                        icon: const Icon(Icons.troubleshoot_outlined),
+                        onPressed: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                DiagnosticsScreen(log: AppLog.instance),
+                          ),
+                        ),
+                      ),
                     ),
                     destinations: <NavigationRailDestination>[
                       NavigationRailDestination(

@@ -66,5 +66,5 @@ a release build after the controlled media libraries have been staged.
 
 - `.github/workflows/flutter-build-mac.yml`: Flutter macOS ARM64 build and DMG.
 - `.github/workflows/flutter-build-win+linux.yml`: Flutter Windows x64 and
-  Linux x64 builds, NSIS/DEB/AppImage packages, and tagged-release artifacts.
+  Linux x64 builds, NSIS/AppImage packages, and tagged-release artifacts.
 - `.github/workflows/flutter-verify-dart.yml`: Flutter analysis and tests.

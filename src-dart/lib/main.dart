@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
@@ -6,6 +9,7 @@ import 'localization/app_strings.dart';
 import 'platform/app_paths.dart';
 import 'platform/media_runtime.dart';
 import 'services/app_controller.dart';
+import 'services/app_log.dart';
 import 'services/export_service.dart';
 import 'services/media_probe.dart';
 import 'services/query_service.dart';
@@ -15,10 +19,33 @@ import 'ui/app_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final log = AppLog.instance;
+  final presentError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    log.error('flutter', details.exceptionAsString(), null, details.stack);
+    presentError?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    log.error('flutter', 'Erro não tratado', error, stackTrace);
+    return false;
+  };
+  log.info(
+    'arranque',
+    'Observideo a iniciar (pid $pid, ${Platform.operatingSystem} '
+        '${Platform.operatingSystemVersion}, Dart ${Platform.version})',
+  );
   final strings = await AppStrings.load();
   try {
+    await log.attachFile(await AppPaths.logFile());
     final mediaRuntime = MediaRuntime.resolve()..validate();
+    log
+      ..info('media', 'Runtime de media em ${mediaRuntime.root}')
+      ..info(
+        'media',
+        'Versões: ${File(mediaRuntime.manifestPath).readAsStringSync().trim()}',
+      );
     MediaKit.ensureInitialized(libmpv: mediaRuntime.libmpvPath);
+    log.info('media', 'libmpv carregada de ${mediaRuntime.libmpvPath}');
     final controller = AppController(
       store: JsonStateStore(await AppPaths.stateFile()),
       scanner: VideoScanner(FfprobeMediaProbe(mediaRuntime.ffprobePath)),
@@ -27,9 +54,10 @@ Future<void> main() async {
       strings: strings,
     );
     await controller.initialize();
+    log.info('arranque', 'Aplicação pronta');
     runApp(ObservideoApp(controller: controller, strings: strings));
-  } on Object catch (error) {
-    debugPrint('Falha ao iniciar: $error');
+  } on Object catch (error, stackTrace) {
+    log.error('arranque', 'Falha ao iniciar', error, stackTrace);
     runApp(StartupFailureApp(strings: strings));
   }
 }

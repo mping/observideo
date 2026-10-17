@@ -20,11 +20,15 @@ fi
 if command -v pkg-config >/dev/null 2>&1; then
   pkg-config --exists libass || missing="$missing libass"
   pkg-config --exists 'libplacebo >= 6.338.2' || missing="$missing libplacebo>=6.338.2"
+  if [ "$platform" = linux ]; then
+    pkg-config --exists libpulse || missing="$missing libpulse"
+    pkg-config --exists alsa || missing="$missing alsa"
+  fi
 fi
 if [ -n "$missing" ]; then
   echo "Missing build dependencies:$missing" >&2
   if [ "$platform" = linux ]; then
-    echo "On Debian/Ubuntu: sudo apt-get install -y clang cmake libass-dev libplacebo-dev meson nasm ninja-build pkg-config" >&2
+    echo "On Debian/Ubuntu: sudo apt-get install -y clang cmake libasound2-dev libass-dev libplacebo-dev libpulse-dev meson nasm ninja-build pkg-config" >&2
   else
     echo "On macOS: brew install meson ninja pkg-config nasm libass libplacebo" >&2
   fi
@@ -49,11 +53,15 @@ fi
 # rpath goes through linker response files, which nothing re-expands.
 ffmpeg_rpath_flags=
 mpv_ldflags=${LDFLAGS:-}
+mpv_options="-Dlibmpv=true -Dcplayer=true"
 if [ "$platform" = linux ]; then
   printf '%s\n' '-rpath=$ORIGIN' > "$cache/rpath-lib.rsp"
   printf '%s\n' '-rpath=$ORIGIN/../lib' > "$cache/rpath-bin.rsp"
   ffmpeg_rpath_flags="--extra-ldsoflags=-Wl,@$cache/rpath-lib.rsp --extra-ldexeflags=-Wl,@$cache/rpath-bin.rsp"
   mpv_ldflags="$mpv_ldflags -Wl,@$cache/rpath-bin.rsp"
+  # mpv silently drops audio outputs whose headers are missing, leaving a
+  # libmpv that plays every video without sound. Fail the build instead.
+  mpv_options="$mpv_options -Dpulse=enabled -Dalsa=enabled"
 fi
 
 cd "$cache/ffmpeg"
@@ -63,10 +71,11 @@ make -j4
 make install
 
 cd "$cache/mpv"
+# shellcheck disable=SC2086 # mpv_options is intentionally split into options.
 if [ -d build/meson-private ]; then
-  LDFLAGS="$mpv_ldflags" PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson setup build --wipe --prefix="$prefix" --libdir=lib -Dlibmpv=true -Dcplayer=true
+  LDFLAGS="$mpv_ldflags" PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson setup build --wipe --prefix="$prefix" --libdir=lib $mpv_options
 else
-  LDFLAGS="$mpv_ldflags" PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson setup build --prefix="$prefix" --libdir=lib -Dlibmpv=true -Dcplayer=true
+  LDFLAGS="$mpv_ldflags" PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson setup build --prefix="$prefix" --libdir=lib $mpv_options
 fi
 PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson compile -C build
 meson install -C build

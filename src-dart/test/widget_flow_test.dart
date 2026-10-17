@@ -5,6 +5,7 @@ import 'package:observideo/domain/models.dart';
 import 'package:observideo/localization/app_strings.dart';
 import 'package:observideo/main.dart';
 import 'package:observideo/services/app_controller.dart';
+import 'package:observideo/services/app_log.dart';
 import 'package:observideo/services/export_service.dart';
 import 'package:observideo/services/media_probe.dart';
 import 'package:observideo/services/query_service.dart';
@@ -32,6 +33,30 @@ void main() {
     expect(find.text(strings.text('navigation_queries')), findsOneWidget);
     expect(find.text(strings.text('navigation_export')), findsOneWidget);
     expect(find.text(strings.text('videos_empty')), findsOneWidget);
+  });
+
+  testWidgets('diagnostics icon opens the filterable application log', (
+    tester,
+  ) async {
+    final controller = _controller(strings);
+    addTearDown(controller.dispose);
+    AppLog.instance
+      ..info('teste', 'evento informativo')
+      ..error('teste', 'falha de teste');
+    await tester.pumpWidget(
+      ObservideoApp(controller: controller, strings: strings),
+    );
+    await tester.tap(find.byIcon(Icons.troubleshoot_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.text('diagnostics_title')), findsOneWidget);
+    expect(find.text('evento informativo'), findsOneWidget);
+    expect(find.text('falha de teste'), findsOneWidget);
+
+    await tester.tap(find.text(strings.text('diagnostics_filter_errors')));
+    await tester.pumpAndSettle();
+    expect(find.text('evento informativo'), findsNothing);
+    expect(find.text('falha de teste'), findsOneWidget);
   });
 
   testWidgets('a template can be created from the Templates screen', (

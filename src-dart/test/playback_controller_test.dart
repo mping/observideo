@@ -94,6 +94,33 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(completed, <int>[1]);
   });
+
+  test('missing audio device is reported without software fallback', () async {
+    final backend = _FakePlaybackBackend();
+    final controller = MediaKitPlaybackController(
+      strings: strings,
+      backend: backend,
+    );
+    addTearDown(controller.dispose);
+    await controller.open(
+      '/video.mp4',
+      durationMs: 31000,
+      intervalMs: 15000,
+      startIndex: 0,
+    );
+
+    backend.errorOutput.add(
+      'Could not open/initialize audio device -> no sound.',
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(backend.softwareDecodingCalls, 0);
+    expect(controller.error, strings.text('error_audio_device'));
+
+    backend.errorOutput.add('Could not open codec.');
+    await Future<void>.delayed(Duration.zero);
+    expect(backend.softwareDecodingCalls, 1);
+    expect(controller.error, strings.text('error_hardware_decoding'));
+  });
 }
 
 final class _FakePlaybackBackend implements PlaybackBackend {
@@ -104,6 +131,7 @@ final class _FakePlaybackBackend implements PlaybackBackend {
   int currentPosition = 0;
   bool currentPlaying = false;
   int playCalls = 0;
+  int softwareDecodingCalls = 0;
 
   @override
   Stream<int> get positionChanges => positions.stream;
@@ -136,7 +164,8 @@ final class _FakePlaybackBackend implements PlaybackBackend {
   @override
   Future<void> seek(int positionMs) async => currentPosition = positionMs;
   @override
-  Future<void> useSoftwareDecoding(String path, int positionMs) async {}
+  Future<void> useSoftwareDecoding(String path, int positionMs) async =>
+      softwareDecodingCalls++;
 
   void emitPosition(int value) {
     currentPosition = value;

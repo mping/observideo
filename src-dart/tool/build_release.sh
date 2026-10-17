@@ -36,15 +36,17 @@ else
   bundle="$project_dir/build/linux/x64/release/bundle"
   packaged_media="$bundle/media"
 fi
-mkdir -p "$packaged_media/bin" "$packaged_media/lib" "$packaged_media/share"
+rm -rf "$packaged_media/lib" "$packaged_media/share"
+mkdir -p "$packaged_media/bin" "$packaged_media/share/observideo"
 cp "$media_root/bin/ffprobe" "$packaged_media/bin/"
-cp -R "$media_root/lib/." "$packaged_media/lib/"
+# Keep the manifest and build reports. The rest of share/ is mpv and FFmpeg
+# man pages, examples, and shell completions, which codesign treats as bundles.
+cp -R "$media_root/share/observideo/." "$packaged_media/share/observideo/"
 if [ "$platform" = macos ]; then
-  # Keep the manifest and build reports. Avoid copying shell completion
-  # directories into the app, which codesign treats as bundles.
-  rm -rf "$packaged_media/share"
-  mkdir -p "$packaged_media/share/observideo"
-  cp -R "$media_root/share/observideo/." "$packaged_media/share/observideo/"
+  mkdir -p "$packaged_media/lib"
+  cp -R "$media_root/lib/." "$packaged_media/lib/"
 else
-  cp -R "$media_root/share/." "$packaged_media/share/"
+  # media_kit_libs_linux already installs these libraries into the bundle's
+  # lib/, so point ffprobe's $ORIGIN/../lib RUNPATH there instead of copying.
+  ln -s ../lib "$packaged_media/lib"
 fi

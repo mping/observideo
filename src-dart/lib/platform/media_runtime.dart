@@ -10,6 +10,9 @@ final class MediaRuntime {
   String get ffprobePath =>
       p.join(root, 'bin', Platform.isWindows ? 'ffprobe.exe' : 'ffprobe');
 
+  String get manifestPath =>
+      p.join(root, 'share', 'observideo', 'codec-manifest.json');
+
   String get libmpvPath {
     if (Platform.isWindows) return p.join(root, 'bin', 'libmpv-2.dll');
     if (Platform.isMacOS) {
@@ -84,9 +87,7 @@ final class MediaRuntime {
     final missing = <String>[
       if (!File(ffprobePath).existsSync()) ffprobePath,
       if (!File(libmpvPath).existsSync()) libmpvPath,
-      if (!File(p.join(root, 'share', 'observideo', 'codec-manifest.json'))
-          .existsSync())
-        p.join(root, 'share', 'observideo', 'codec-manifest.json'),
+      if (!File(manifestPath).existsSync()) manifestPath,
     ];
     if (missing.isNotEmpty) {
       throw StateError(

@@ -14,6 +14,16 @@ navigation_videos: Vídeos
 navigation_templates: Modelos
 navigation_queries: Consultas
 navigation_export: Exportar
+navigation_diagnostics: Diagnóstico
+
+diagnostics_title: Diagnóstico
+diagnostics_copy: Copiar registo
+diagnostics_copied: Registo copiado para a área de transferência.
+diagnostics_filter_all: Tudo
+diagnostics_filter_warnings: Avisos e erros
+diagnostics_filter_errors: Erros
+diagnostics_empty: O registo não tem entradas.
+diagnostics_log_file: 'Ficheiro de registo: {path}'
 
 videos_title: Vídeos
 videos_folder_prompt: Escolha uma pasta com ficheiros MP4, AVI ou WebM.
@@ -148,3 +158,4 @@ error_save: Não foi possível guardar os dados.
 error_hardware_decoding: A descodificação por hardware falhou; está a ser utilizada a descodificação por software.
 error_software_decoding: A descodificação por software também falhou.
 error_playback: Ocorreu um erro durante a reprodução do vídeo.
+error_audio_device: Não foi possível abrir o dispositivo de áudio; o vídeo é reproduzido sem som.

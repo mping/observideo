@@ -7,6 +7,7 @@ import '../domain/default_template.dart';
 import '../domain/interval_model.dart';
 import '../domain/models.dart';
 import '../localization/app_strings.dart';
+import 'app_log.dart';
 import 'export_service.dart';
 import 'query_service.dart';
 import 'state_store.dart';
@@ -26,6 +27,7 @@ final class AppController extends ChangeNotifier {
   final ExportService exportService;
   final QueryService queryService;
   final AppStrings strings;
+  final _log = AppLog.instance;
 
   Database database;
   bool initialized = false;
@@ -34,14 +36,28 @@ final class AppController extends ChangeNotifier {
   int scanTotal = 0;
   String? error;
   Timer? _saveTimer;
+  var _disposed = false;
 
   Future<void> initialize() async {
     try {
+      _log.info('dados', 'A abrir ${store.filePath}');
       await store.acquireLock();
-      database = await store.load() ?? makeDefaultDatabase(strings);
+      final loaded = await store.load();
+      database = loaded ?? makeDefaultDatabase(strings);
+      _log.info(
+        'dados',
+        loaded == null
+            ? 'Sem dados guardados; a usar o modelo predefinido'
+            : 'Dados carregados (${_summary()})',
+      );
       initialized = true;
-    } on Object catch (exception) {
-      debugPrint('Não foi possível abrir os dados da aplicação: $exception');
+    } on Object catch (exception, stackTrace) {
+      _log.error(
+        'dados',
+        'Não foi possível abrir os dados da aplicação',
+        exception,
+        stackTrace,
+      );
       error = strings.text('error_open_data');
       notifyListeners();
       rethrow;
@@ -56,6 +72,7 @@ final class AppController extends ChangeNotifier {
     error = null;
     database.videosFolder = directory;
     notifyListeners();
+    _log.info('análise', 'A analisar $directory');
     try {
       final entries = await scanner.scan(
         directory,
@@ -65,10 +82,28 @@ final class AppController extends ChangeNotifier {
           notifyListeners();
         },
       );
+      for (final entry in entries.where((entry) => entry.probeFailed)) {
+        _log.warning(
+          'análise',
+          'Falha ao analisar ${entry.path}: ${entry.probeError}',
+        );
+      }
       _mergeScan(entries);
+      _log.info(
+        'análise',
+        'Análise concluída: ${entries.length} vídeos encontrados, '
+            '${entries.where((entry) => entry.probeFailed).length} com falhas, '
+            '${database.videos.where((video) => video.missing).length} em '
+            'falta',
+      );
       _scheduleSave();
-    } on Object catch (exception) {
-      debugPrint('Não foi possível analisar os vídeos: $exception');
+    } on Object catch (exception, stackTrace) {
+      _log.error(
+        'análise',
+        'Não foi possível analisar os vídeos',
+        exception,
+        stackTrace,
+      );
       error = strings.text('error_scan_videos');
     } finally {
       scanning = false;
@@ -130,6 +165,7 @@ final class AppController extends ChangeNotifier {
     if (video.durationMs <= 0) {
       return strings.text('error_video_duration_unknown');
     }
+    _log.info('dados', 'Modelo «${template.name}» aplicado a $videoPath');
     video.annotation = Annotation(
       templateId: templateId,
       intervalMs: template.intervalMs,
@@ -143,6 +179,7 @@ final class AppController extends ChangeNotifier {
   }
 
   void clearTemplate(String videoPath) {
+    _log.info('dados', 'Anotações removidas de $videoPath');
     database.findVideo(videoPath)?.annotation = null;
     _changed();
   }
@@ -346,12 +383,33 @@ final class AppController extends ChangeNotifier {
   Future<void> flushSave() async {
     _saveTimer?.cancel();
     _saveTimer = null;
-    final errors = await store.save(database);
-    if (errors.isNotEmpty) {
-      debugPrint('Não foi possível guardar: ${errors.join('; ')}');
-      error = strings.text('error_save');
-      notifyListeners();
+    final clock = Stopwatch()..start();
+    final List<String> errors;
+    try {
+      errors = await store.save(database);
+    } on Object catch (exception, stackTrace) {
+      _log.error('dados', 'Não foi possível guardar', exception, stackTrace);
+      _reportSaveFailure();
+      return;
     }
+    if (errors.isNotEmpty) {
+      _log.error(
+        'dados',
+        'Dados inválidos não guardados: ${errors.join('; ')}',
+      );
+      _reportSaveFailure();
+      return;
+    }
+    _log.info(
+      'dados',
+      'Dados guardados (${_summary()}, ${clock.elapsedMilliseconds} ms)',
+    );
+  }
+
+  void _reportSaveFailure() {
+    error = strings.text('error_save');
+    // The final save runs from dispose(), after which nobody is listening.
+    if (!_disposed) notifyListeners();
   }
 
   void clearError() {
@@ -364,6 +422,10 @@ final class AppController extends ChangeNotifier {
     _scheduleSave();
   }
 
+  String _summary() =>
+      '${database.videos.length} vídeos, '
+      '${database.templates.length} modelos';
+
   void _scheduleSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), () {
@@ -373,6 +435,7 @@ final class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _saveTimer?.cancel();
     unawaited(flushSave().whenComplete(store.close));
     super.dispose();

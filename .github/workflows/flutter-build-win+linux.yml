@@ -37,8 +37,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            clang cmake libass-dev libepoxy-dev libgtk-3-dev liblzma-dev \
-            libplacebo-dev meson nasm ninja-build pkg-config
+            clang cmake libasound2-dev libass-dev libepoxy-dev libgtk-3-dev \
+            liblzma-dev libplacebo-dev libpulse-dev meson nasm ninja-build \
+            pkg-config
 
       - name: Restore controlled media build
         id: media-cache
@@ -77,34 +78,11 @@ jobs:
           test -n "$appimage"
           mv "$appimage" build/Observideo-flutter-linux-x64.AppImage
 
-      - name: Package Linux bundle and DEB
-        run: |
-          bundle=build/linux/x64/release/bundle
-          tar -C "$(dirname "$bundle")" -czf build/Observideo-flutter-linux-x64.tar.gz bundle
-
-          package_root=build/deb-root
-          install -d \
-            "$package_root/DEBIAN" \
-            "$package_root/usr/bin" \
-            "$package_root/usr/lib/observideo" \
-            "$package_root/usr/share/applications" \
-            "$package_root/usr/share/icons/hicolor/256x256/apps"
-          cp -R "$bundle/." "$package_root/usr/lib/observideo/"
-          ln -s ../lib/observideo/observideo "$package_root/usr/bin/observideo"
-          cp packaging/linux/debian/control "$package_root/DEBIAN/control"
-          cp packaging/linux/observideo.desktop "$package_root/usr/share/applications/"
-          cp macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png \
-            "$package_root/usr/share/icons/hicolor/256x256/apps/observideo.png"
-          dpkg-deb --build "$package_root" build/Observideo-flutter-linux-x64.deb
-
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v7
         with:
           name: Observideo-flutter-linux-x64
-          path: |
-            src-dart/build/Observideo-flutter-linux-x64.AppImage
-            src-dart/build/Observideo-flutter-linux-x64.tar.gz
-            src-dart/build/Observideo-flutter-linux-x64.deb
+          path: src-dart/build/Observideo-flutter-linux-x64.AppImage
           if-no-files-found: error
 
   windows:
