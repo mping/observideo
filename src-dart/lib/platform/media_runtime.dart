@@ -31,8 +31,13 @@ final class MediaRuntime {
       if (candidates.isNotEmpty) return candidates.first.path;
       return p.join(root, 'lib', 'libmpv.dylib');
     }
-    // media_kit_video links the bundled copy; loading a second copy from the
-    // media root gives Dart a handle whose globals the plugin can't see.
+    // media_kit_video links libmpv into the process at startup; loading a
+    // second copy gives Dart a handle whose globals the plugin can't see, and
+    // mpv aborts in m_config_cache_from_shadow once a video is rendered.
+    // Packagers such as linuxdeploy relocate the linked copy (bundle lib/ ->
+    // AppDir usr/lib), so ask the process which file it actually mapped.
+    final linked = _mappedLibrary('libmpv.so');
+    if (linked != null) return linked;
     final bundled = p.join(
       File(Platform.resolvedExecutable).parent.path,
       'lib',
@@ -88,6 +93,22 @@ final class MediaRuntime {
         'Controlled media runtime is incomplete: ${missing.join(', ')}',
       );
     }
+  }
+
+  static String? _mappedLibrary(String prefix) {
+    final List<String> maps;
+    try {
+      maps = File('/proc/self/maps').readAsLinesSync();
+    } on FileSystemException {
+      return null;
+    }
+    // address perms offset dev inode pathname; the pathname may hold spaces.
+    final entry = RegExp(r'^(?:\S+\s+){5}(/.*)$');
+    for (final line in maps) {
+      final path = entry.firstMatch(line)?.group(1);
+      if (path != null && p.basename(path).startsWith(prefix)) return path;
+    }
+    return null;
   }
 
   static String _architecture() {
