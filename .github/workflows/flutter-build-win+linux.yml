@@ -40,19 +40,26 @@ jobs:
             clang cmake libass-dev libepoxy-dev libgtk-3-dev liblzma-dev \
             libplacebo-dev meson nasm ninja-build pkg-config
 
-      - name: Cache controlled media build
-        uses: actions/cache@v6
+      - name: Restore controlled media build
+        id: media-cache
+        uses: actions/cache/restore@v6
         with:
-          path: |
-            src-dart/native/media/cache
-            src-dart/native/media/out
-          key: linux-x64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
+          path: src-dart/native/media/out/linux-x64
+          key: media-v2-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
 
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
       - name: Build FFmpeg and libmpv
+        if: steps.media-cache.outputs.cache-hit != 'true'
         run: ./native/media/build_unix.sh
+
+      - name: Save controlled media build
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: src-dart/native/media/out/linux-x64
+          key: ${{ steps.media-cache.outputs.cache-primary-key }}
 
       - name: Build Flutter application
         run: ./tool/build_release.sh
@@ -142,25 +149,32 @@ jobs:
             mingw-w64-x86_64-pkgconf
             mingw-w64-x86_64-tools
 
-      - name: Cache controlled media build
-        uses: actions/cache@v6
+      - name: Restore controlled media build
+        id: media-cache
+        uses: actions/cache/restore@v6
         with:
-          path: |
-            src-dart/native/media/cache
-            src-dart/native/media/out
-          key: windows-x64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_windows_msys2.sh') }}
+          path: src-dart/native/media/out/windows-x64
+          key: media-v2-windows-2022-${{ runner.arch }}-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_windows_msys2.sh') }}
 
       - name: Resolve Flutter dependencies
         shell: pwsh
         run: flutter pub get
 
       - name: Build FFmpeg and libmpv
+        if: steps.media-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: ./native/media/build_windows_msys2.sh
 
       - name: Validate controlled media runtime
         shell: pwsh
         run: ./native/media/build_windows.ps1
+
+      - name: Save controlled media build
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: src-dart/native/media/out/windows-x64
+          key: ${{ steps.media-cache.outputs.cache-primary-key }}
 
       - name: Build Flutter application
         shell: pwsh

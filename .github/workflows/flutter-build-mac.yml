@@ -38,19 +38,26 @@ jobs:
       - name: Install native build dependencies
         run: brew install meson ninja pkg-config nasm libass libplacebo
 
-      - name: Cache controlled media build
-        uses: actions/cache@v6
+      - name: Restore controlled media build
+        id: media-cache
+        uses: actions/cache/restore@v6
         with:
-          path: |
-            src-dart/native/media/cache
-            src-dart/native/media/out
-          key: macos-arm64-media-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
+          path: src-dart/native/media/out/macos-arm64
+          key: media-v2-macos-15-${{ runner.arch }}-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
 
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
       - name: Build FFmpeg and libmpv
+        if: steps.media-cache.outputs.cache-hit != 'true'
         run: ./native/media/build_unix.sh
+
+      - name: Save controlled media build
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: src-dart/native/media/out/macos-arm64
+          key: ${{ steps.media-cache.outputs.cache-primary-key }}
 
       - name: Build Flutter application
         run: ./tool/build_release.sh
