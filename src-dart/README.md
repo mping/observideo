@@ -29,8 +29,10 @@ kill -USR1 "$(cat .dart_tool/observideo-flutter.pid)"
 
 On Windows, run `native/media/build_windows_msys2.sh` in an MSYS2 MINGW64
 shell, validate the result with `native/media/build_windows.ps1`, then run
-`tool/build_windows.ps1`. Media artifacts use mpv 0.41.0 and FFmpeg 7.1.3 and
-live under `native/media/out/<platform>-<architecture>`.
+`tool/run_dev.ps1` for the hot-reload runner or `tool/build_windows.ps1` for a
+release bundle. Flutter plugin builds need Developer Mode enabled. Media
+artifacts use mpv 0.41.0 and FFmpeg 7.1.3 and live under
+`native/media/out/<platform>-<architecture>`.
 
 Useful checks:
 

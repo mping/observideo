@@ -48,6 +48,10 @@ cd src-dart
 ./tool/run_dev.sh              # attached process with hot reload
 ```
 
+On Windows, build the media runtime as described in
+[src-dart/README.md](src-dart/README.md), then run `.\tool\run_dev.ps1` from
+`src-dart\` in PowerShell.
+
 Run `flutter analyze`, `flutter test`, and `flutter test integration_test`
 from `src-dart/` before submitting changes. Use `./tool/build_release.sh` for
 a release build after the controlled media libraries have been staged.

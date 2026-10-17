@@ -7,7 +7,7 @@ arch=$(uname -m)
 case "$platform" in
   darwin) platform=macos ;;
   linux) ;;
-  *) echo "Use tool/build_windows.ps1 on Windows." >&2; exit 1 ;;
+  *) echo "Use tool/run_dev.ps1 on Windows." >&2; exit 1 ;;
 esac
 case "$arch" in
   arm64|aarch64) arch=arm64 ;;
