@@ -1,6 +1,6 @@
-# Observideo Flutter Port
+# Observideo
 
-This directory contains the standalone Flutter/Dart desktop implementation.
+This directory contains the Flutter/Dart desktop application.
 It uses the version 1 JSON schema and does not read the Electron Transit
 database.
 
