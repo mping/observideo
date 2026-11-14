@@ -3,10 +3,10 @@ name: Build/release Flutter Windows and Linux
 on:
   workflow_dispatch:
   push:
-    branches: [master, gh-updates]
+    branches: [master, dart-only, gh-updates]
     tags: ['v*']
     paths:
-      - 'src-dart/**'
+      - 'src/**'
       - '.github/workflows/flutter-build-win+linux.yml'
 
 concurrency:
@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 120
     defaults:
       run:
-        working-directory: src-dart
+        working-directory: src
 
     steps:
       - name: Check out repository
@@ -45,8 +45,8 @@ jobs:
         id: media-cache
         uses: actions/cache/restore@v6
         with:
-          path: src-dart/native/media/out/linux-x64
-          key: media-v2-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_unix.sh') }}
+          path: src/native/media/out/linux-x64
+          key: media-v2-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('src/native/media/versions.env', 'src/native/media/build_unix.sh') }}
 
       - name: Resolve Flutter dependencies
         run: flutter pub get
@@ -59,7 +59,7 @@ jobs:
         if: steps.media-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: src-dart/native/media/out/linux-x64
+          path: src/native/media/out/linux-x64
           key: ${{ steps.media-cache.outputs.cache-primary-key }}
 
       - name: Build Flutter application
@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Observideo-flutter-linux-x64
-          path: src-dart/build/Observideo-flutter-linux-x64.AppImage
+          path: src/build/Observideo-flutter-linux-x64.AppImage
           if-no-files-found: error
 
   windows:
@@ -90,7 +90,7 @@ jobs:
     timeout-minutes: 180
     defaults:
       run:
-        working-directory: src-dart
+        working-directory: src
 
     steps:
       - name: Check out repository
@@ -118,6 +118,7 @@ jobs:
             make
             nasm
             mingw-w64-x86_64-angleproject
+            mingw-w64-x86_64-binutils
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-headers
             mingw-w64-x86_64-libass
@@ -125,14 +126,13 @@ jobs:
             mingw-w64-x86_64-meson
             mingw-w64-x86_64-ninja
             mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-tools
 
       - name: Restore controlled media build
         id: media-cache
         uses: actions/cache/restore@v6
         with:
-          path: src-dart/native/media/out/windows-x64
-          key: media-v2-windows-2022-${{ runner.arch }}-${{ hashFiles('src-dart/native/media/versions.env', 'src-dart/native/media/build_windows_msys2.sh') }}
+          path: src/native/media/out/windows-x64
+          key: media-v2-windows-2022-${{ runner.arch }}-${{ hashFiles('src/native/media/versions.env', 'src/native/media/build_windows_msys2.sh') }}
 
       - name: Resolve Flutter dependencies
         shell: pwsh
@@ -151,7 +151,7 @@ jobs:
         if: steps.media-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: src-dart/native/media/out/windows-x64
+          path: src/native/media/out/windows-x64
           key: ${{ steps.media-cache.outputs.cache-primary-key }}
 
       - name: Build Flutter application
@@ -186,8 +186,8 @@ jobs:
         with:
           name: Observideo-flutter-windows-x64
           path: |
-            src-dart/build/Observideo-flutter-windows-x64.zip
-            src-dart/build/Observideo-flutter-windows-x64.exe
+            src/build/Observideo-flutter-windows-x64.zip
+            src/build/Observideo-flutter-windows-x64.exe
           if-no-files-found: error
 
   release:

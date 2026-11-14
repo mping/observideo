@@ -3,11 +3,11 @@ name: Verify Flutter desktop app
 on:
   push:
     paths:
-      - 'src-dart/**'
+      - 'src/**'
       - '.github/workflows/flutter-verify-dart.yml'
   pull_request:
     paths:
-      - 'src-dart/**'
+      - 'src/**'
       - '.github/workflows/flutter-verify-dart.yml'
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: src-dart
+        working-directory: src
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
