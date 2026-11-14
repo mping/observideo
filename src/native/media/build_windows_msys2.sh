@@ -42,7 +42,7 @@ meson install -C build
 
 # media_kit_video renders through ANGLE and expects MSVC-compatible import
 # libraries alongside the headers. GNU dlltool emits compatible COFF import
-# libraries when given the exported symbols from the controlled DLLs.
+# libraries from the function symbols in ANGLE's installed import libraries.
 mkdir -p "$prefix/angle/include" "$prefix/angle/lib" "$prefix/bin"
 cp -R /mingw64/include/EGL "$prefix/angle/include/"
 cp -R /mingw64/include/GLES2 "$prefix/angle/include/"
@@ -60,7 +60,12 @@ EOF
 cp /mingw64/bin/libEGL.dll /mingw64/bin/libGLESv2.dll "$prefix/bin/"
 for library in libEGL libGLESv2; do
   cd "$prefix/angle/lib"
-  gendef "$prefix/bin/$library.dll"
+  nm --defined-only --extern-only \
+    "/mingw64/lib/$library.dll.a" | awk '
+      BEGIN { print "EXPORTS" }
+      $2 == "T" { print $3; count++ }
+      END { if (!count) exit 1 }
+    ' > "$library.def"
   dlltool -d "$library.def" -D "$library.dll" -l "$library.dll.lib"
 done
 
