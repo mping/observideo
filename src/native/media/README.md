@@ -14,6 +14,14 @@ store in this repository. Production CI should additionally verify mirrored
 source archives by organization-controlled SHA-256 checksums.
 
 `build_unix.sh` builds and stages the pinned sources on macOS or Linux.
+On macOS it also caches the linked third-party dylibs, including Homebrew
+dependencies. `tool/stage_media.sh` embeds that dependency closure for CocoaPods;
+the release builder relocates the app and ffprobe references into the bundle,
+signs the result, and rejects missing or external runtime library references.
+The same audit can be run independently with
+`python3 tool/bundle_macos_libraries.py --check --app /path/to/observideo.app`
+from the Flutter project directory.
+
 `build_windows_msys2.sh` performs the equivalent source build in an MSYS2
 MINGW64 shell and stages its runtime dependencies and ANGLE artifacts under
 `out/windows-x64`. Run `build_windows.ps1` afterward to validate the exact

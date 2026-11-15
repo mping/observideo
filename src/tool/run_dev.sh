@@ -21,10 +21,15 @@ if [ ! -x "$media_root/bin/ffprobe" ]; then
 fi
 
 cd "$project_dir"
+flutter pub get
 OBSERVIDEO_MEDIA_ROOT="$media_root" ./tool/stage_media.sh
+if [ "$platform" = macos ]; then
+  (cd macos && pod install)
+fi
 mkdir -p "$project_dir/.dart_tool"
 OBSERVIDEO_MEDIA_ROOT="$media_root" flutter run \
   --debug \
+  --no-pub \
   --hot \
   --pid-file="$project_dir/.dart_tool/observideo-flutter.pid" \
   -d "$platform" \

@@ -29,6 +29,7 @@ if [ -d "$framework/Resources" ] && [ ! -L "$framework/Resources" ]; then
   mv "$framework/Resources" "$framework_version/Resources"
 fi
 mkdir -p "$framework_version/Headers/mpv" "$framework_version/Resources" "$libraries"
+find "$libraries" -maxdepth 1 -name '*.dylib' -delete
 mkdir -p "$mpv_search_root"
 cp "$libmpv" "$framework_version/Mpv"
 cp -R "$media_root/include/mpv/." "$framework_version/Headers/mpv/"
@@ -49,9 +50,8 @@ for dylib in "$libraries"/*.dylib; do
   [ -e "$dylib" ] || continue
   install_name_tool -id "@rpath/$(basename "$dylib")" "$dylib"
 done
-for binary in "$framework_version/Mpv" "$libraries"/*.dylib; do
-  [ -e "$binary" ] || continue
-  otool -L "$binary" | awk -v root="$media_root/lib/" 'index($1, root) == 1 { print $1 }' | while IFS= read -r dependency; do
-    install_name_tool -change "$dependency" "@rpath/$(basename "$dependency")" "$binary"
-  done
-done
+# Include Homebrew dependencies recursively, not just the controlled FFmpeg
+# libraries. CocoaPods embeds everything in Libraries/ into Contents/Frameworks.
+python3 "$project_dir/tool/bundle_macos_libraries.py" \
+  --libraries "$libraries" --binary "$framework_version/Mpv" --rpath \
+  --search "$media_root/lib"

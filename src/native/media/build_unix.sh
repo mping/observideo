@@ -80,6 +80,14 @@ fi
 PKG_CONFIG_PATH="$prefix/lib/pkgconfig" meson compile -C build
 meson install -C build
 
+if [ "$platform" = macos ]; then
+  # Cache the complete dependency closure, so a later Homebrew upgrade cannot
+  # leave the cached media runtime pointing at a removed dylib version.
+  python3 "$media_dir/../../tool/bundle_macos_libraries.py" \
+    --libraries "$prefix/lib" --binary "$prefix/bin/ffmpeg" \
+    --binary "$prefix/bin/ffprobe" --binary "$prefix/bin/mpv"
+fi
+
 mkdir -p "$prefix/share/observideo"
 "$prefix/bin/ffmpeg" -hide_banner -buildconf > "$prefix/share/observideo/ffmpeg-build.txt" 2>&1
 "$prefix/bin/ffmpeg" -hide_banner -decoders > "$prefix/share/observideo/ffmpeg-decoders.txt" 2>&1

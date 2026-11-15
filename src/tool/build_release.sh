@@ -19,15 +19,26 @@ test -x "$media_root/bin/ffprobe"
 test -f "$media_root/share/observideo/codec-manifest.json"
 
 cd "$project_dir"
+flutter pub get
 OBSERVIDEO_MEDIA_ROOT="$media_root" ./tool/stage_media.sh
+if [ "$platform" = macos ]; then
+  # The vendored dylib list changes when a dependency is added or upgraded.
+  # Flutter does not detect that change from pubspec.lock alone.
+  (cd macos && pod install)
+fi
 # The controlled macOS media build contains only the host architecture.
 # Flutter's release default is universal, so select its arm64-only build on
 # Apple Silicon before linking the staged Mpv.framework.
 if [ "$platform" = macos ] && [ "$arch" = arm64 ]; then
   export FLUTTER_MACOS_ARM64_ONLY=true
 fi
+if [ "$platform" = macos ]; then
+  # Previous releases copied raw libraries and pkgconfig files here; those
+  # stale files can make Xcode's signing phase fail before we can restage.
+  rm -rf "$project_dir/build/macos/Build/Products/Release/observideo.app/Contents/MacOS/media"
+fi
 PKG_CONFIG_PATH="$media_root/lib/pkgconfig:${PKG_CONFIG_PATH:-}" \
-  OBSERVIDEO_MEDIA_ROOT="$media_root" flutter build "$platform" --release
+  OBSERVIDEO_MEDIA_ROOT="$media_root" flutter build "$platform" --release --no-pub
 
 if [ "$platform" = macos ]; then
   app="$project_dir/build/macos/Build/Products/Release/observideo.app"
@@ -43,8 +54,13 @@ cp "$media_root/bin/ffprobe" "$packaged_media/bin/"
 # man pages, examples, and shell completions, which codesign treats as bundles.
 cp -R "$media_root/share/observideo/." "$packaged_media/share/observideo/"
 if [ "$platform" = macos ]; then
-  mkdir -p "$packaged_media/lib"
-  cp -R "$media_root/lib/." "$packaged_media/lib/"
+  # Relocate the helper's libraries too, and verify the complete app before
+  # signing. A successful link on a machine with Homebrew is insufficient.
+  python3 "$project_dir/tool/bundle_macos_libraries.py" \
+    --app "$app" --search "$media_root/lib"
+  codesign --force --deep --sign - "$app"
+  codesign --verify --deep --strict "$app"
+  "$packaged_media/bin/ffprobe" -version >/dev/null
 else
   # media_kit_libs_linux already installs these libraries into the bundle's
   # lib/, so point ffprobe's $ORIGIN/../lib RUNPATH there instead of copying.

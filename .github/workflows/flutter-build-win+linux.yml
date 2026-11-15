@@ -3,7 +3,7 @@ name: Build/release Flutter Windows and Linux
 on:
   workflow_dispatch:
   push:
-    branches: [master, dart-only, gh-updates]
+    branches: [master, gh-updates]
     tags: ['v*']
     paths:
       - 'src/**'
