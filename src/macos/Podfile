@@ -38,5 +38,10 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    # Release packaging may need to relocate a framework's library references.
+    target.build_configurations.each do |config|
+      flags = Array(config.build_settings['OTHER_LDFLAGS'] || '$(inherited)')
+      config.build_settings['OTHER_LDFLAGS'] = flags | ['-Wl,-headerpad_max_install_names']
+    end
   end
 end

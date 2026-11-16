@@ -42,6 +42,15 @@ def is_system(path):
     return path.startswith(('/usr/lib/', '/System/Library/'))
 
 
+def runtime_dependencies(binary):
+    # Homebrew's SDL2 may be sdl2-compat. It dlopens SDL3 instead of linking
+    # it, so this dependency is absent from LC_LOAD_DYLIB / otool -L.
+    if (binary.name.startswith('libSDL2')
+            and b'Failed loading SDL3 library.' in binary.read_bytes()):
+        return ['@loader_path/libSDL3.dylib']
+    return []
+
+
 def expand(path, loader, executable):
     return Path(path.replace('@loader_path', str(loader.parent))
                 .replace('@executable_path', str(executable)))
@@ -87,11 +96,18 @@ def bundle(roots, destination, search, executable, rpath=False):
             continue
         visited.add(binary)
         identity, dependencies, rpaths = load_commands(source)
+        dynamic = runtime_dependencies(source)
         changes = []
-        for dependency in dependencies:
+        for dependency in dependencies + dynamic:
             if is_system(dependency):
                 continue
-            resolved = resolve(dependency, source, executable, rpaths, search)
+            try:
+                resolved = resolve(dependency, source, executable, rpaths, search)
+            except RuntimeError:
+                if dependency not in dynamic:
+                    raise
+                libdir = Path(run('pkg-config', '--variable=libdir', 'sdl3').strip())
+                resolved = resolve(dependency, source, executable, rpaths, [libdir])
             # Preserve frameworks and libraries already embedded by Xcode.
             if resolved in visited or resolved.is_relative_to(destination):
                 target = resolved
@@ -107,16 +123,14 @@ def bundle(roots, destination, search, executable, rpath=False):
                     count += 1
             if target not in visited:
                 queue.append((target, resolved))
-            relative = ('@rpath/' + target.name if rpath else
+            relative = ('@rpath/' + str(target.relative_to(destination)) if rpath else
                         '@loader_path/' + os.path.relpath(target, binary.parent))
-            if (not rpath and dependency.startswith('@rpath/')
-                    and resolved.is_relative_to(destination)
-                    and binary.parent == executable):
-                # Xcode's app executable already provides the Frameworks rpath.
+            if (rpath and dependency.startswith('@rpath/')
+                    and resolved.is_relative_to(destination)):
                 # Retain working framework references: growing every load command
                 # can exhaust the executable's reserved Mach-O header space.
                 relative = dependency
-            if relative != dependency:
+            if dependency not in dynamic and relative != dependency:
                 changes += ['-change', dependency, relative]
         if identity and binary.parent == destination:
             changes += ['-id', '@rpath/' + binary.name]
@@ -133,19 +147,55 @@ def check_app(app):
     executable = app / 'Contents/MacOS'
     with (app / 'Contents/Info.plist').open('rb') as stream:
         main = executable / plistlib.load(stream)['CFBundleExecutable']
-    inherited = [str(expand(p, main, executable))
-                 for p in load_commands(main)[2]]
-    for binary in binaries:
-        _, dependencies, rpaths = load_commands(binary)
-        for dependency in dependencies:
-            if is_system(dependency):
+    # Check each executable independently. ffprobe cannot inherit the Flutter
+    # executable's rpaths when it is launched as a separate process.
+    executables = [p for p in binaries if is_executable(p)]
+    executables.sort(key=lambda p: p != main)
+    checked = set()
+    for entry in [*executables, *binaries]:
+        if entry in checked and entry not in executables:
+            continue
+        visited = set()
+        queue = deque([(entry, [], entry.parent if entry in executables else executable)])
+        while queue:
+            binary, inherited, executable_dir = queue.popleft()
+            if binary in visited:
                 continue
-            if dependency.startswith('/'):
-                raise RuntimeError(f'{binary}: absolute runtime dependency {dependency}')
-            resolved = resolve(dependency, binary, executable, rpaths + inherited, [])
-            if not resolved.is_relative_to(app):
-                raise RuntimeError(f'{binary}: dependency escapes app: {dependency}')
+            visited.add(binary)
+            checked.add(binary)
+            _, dependencies, rpaths = load_commands(binary)
+            dependencies += runtime_dependencies(binary)
+            paths = [str(expand(p, binary, executable_dir)) for p in rpaths] + inherited
+            for dependency in dependencies:
+                if is_system(dependency):
+                    continue
+                if dependency.startswith('/'):
+                    raise RuntimeError(f'{binary}: absolute runtime dependency {dependency}')
+                resolved = resolve(dependency, binary, executable_dir, paths, [])
+                if not resolved.is_relative_to(app):
+                    raise RuntimeError(f'{binary}: dependency escapes app: {dependency}')
+                queue.append((resolved, paths, executable_dir))
     print(f'Validated {len(binaries)} Mach-O files: all dependencies are bundled or system libraries.')
+
+
+def is_executable(binary):
+    return 'EXECUTE' in run('otool', '-hv', binary).split()
+
+
+def bundle_app(app, search):
+    app = app.resolve()
+    destination = app / 'Contents/Frameworks'
+    binaries = list(macho_files(app))
+    # Shorten absolute build-host references first, freeing header space before
+    # adding the helper executable's run path.
+    bundle(binaries, destination, search, app / 'Contents/MacOS', rpath=True)
+    for binary in binaries:
+        if is_executable(binary):
+            rpaths = load_commands(binary)[2]
+            if not any(expand(p, binary, binary.parent).resolve() == destination for p in rpaths):
+                path = '@loader_path/' + os.path.relpath(destination, binary.parent)
+                run('install_name_tool', '-add_rpath', path, binary)
+                run('codesign', '--force', '--sign', '-', binary)
 
 
 def main():
@@ -160,9 +210,7 @@ def main():
     args = parser.parse_args()
     if args.app:
         if not args.check:
-            app = args.app.resolve()
-            bundle(list(macho_files(app)), app / 'Contents/Frameworks',
-                   args.search, app / 'Contents/MacOS')
+            bundle_app(args.app, args.search)
         check_app(args.app)
     elif args.libraries and args.binary and not args.check:
         bundle(args.binary + list(args.libraries.glob('*.dylib')),

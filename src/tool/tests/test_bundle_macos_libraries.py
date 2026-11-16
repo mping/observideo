@@ -51,7 +51,7 @@ class BundleTests(unittest.TestCase):
         helper.parent.mkdir(parents=True)
         self.compile('extern int parent(void); int main(void) { return parent() != 42; }',
                      helper, str(self.parent))
-        bundler.bundle([self.main, helper], self.frameworks, [], self.executables)
+        bundler.bundle_app(self.app, [])
         self.external.rename(self.root / 'unavailable')
         bundler.check_app(self.app)
         subprocess.run([str(self.main)], check=True)
@@ -69,8 +69,7 @@ class BundleTests(unittest.TestCase):
         bundler.bundle([mpv], libs, [moved], self.executables, rpath=True)
         shutil.copy2(mpv, self.frameworks / self.parent.name)
         shutil.copytree(libs, self.frameworks, dirs_exist_ok=True)
-        bundler.bundle(list(bundler.macho_files(self.app)), self.frameworks,
-                       [moved], self.executables)
+        bundler.bundle_app(self.app, [moved])
         moved.rename(self.root / 'unavailable')
         bundler.check_app(self.app)
         subprocess.run([str(self.main)], check=True)
@@ -81,6 +80,51 @@ class BundleTests(unittest.TestCase):
         self.leaf.unlink()
         with self.assertRaisesRegex(RuntimeError, 'missing dependency'):
             bundler.bundle([self.main], self.frameworks, [], self.executables)
+
+    def test_preserves_versioned_framework_load_commands(self):
+        # Reproduce the tiny CocoaPods shim that failed on the CI runner.
+        mpv = self.frameworks / 'Mpv.framework/Versions/A/Mpv'
+        shim_name = 'media_kit_libs_macos_video'
+        shim = self.frameworks / f'{shim_name}.framework/Versions/A/{shim_name}'
+        for binary in (mpv, shim):
+            binary.parent.mkdir(parents=True)
+            (binary.parents[2] / binary.name).symlink_to('Versions/A/' + binary.name)
+        self.compile('int mpv(void) { return 42; }', mpv, '-dynamiclib',
+                     '-Wl,-install_name,@rpath/Mpv.framework/Mpv')
+        shim_id = f'@rpath/{shim_name}.framework/Versions/A/{shim_name}'
+        self.compile('extern int mpv(void); int parent(void) { return mpv(); }',
+                     shim, '-dynamiclib', str(mpv), '-Wl,-install_name,' + shim_id)
+        self.compile('extern int parent(void); int main(void) { return parent() != 42; }',
+                     self.main, str(shim), '-Wl,-rpath,@executable_path/../Frameworks')
+        original = {p: p.read_bytes() for p in (mpv, shim, self.main)}
+        bundler.bundle_app(self.app, [])
+        for binary, content in original.items():
+            self.assertEqual(binary.read_bytes(), content,
+                             f'Already relocatable binary was rewritten: {binary}')
+        bundler.check_app(self.app)
+        subprocess.run([str(self.main)], check=True)
+
+    def test_sdl_compat_runtime_dependency(self):
+        compat = self.external / 'libSDL2-2.0.0.dylib'
+        shutil.copy2(self.leaf, self.external / 'libSDL3.dylib')
+        self.compile('''
+            #include <dlfcn.h>
+            const char marker[] = "Failed loading SDL3 library.";
+            int parent(void) {
+                void *h = dlopen("@loader_path/libSDL3.dylib", RTLD_NOW);
+                if (!h) return 0;
+                return ((int (*)(void))dlsym(h, "leaf"))();
+            }
+        ''', compat, '-dynamiclib', '-Wl,-install_name,' + str(compat))
+        self.compile('extern int parent(void); int main(void) { return parent() != 42; }',
+                     self.main, str(compat), '-Wl,-rpath,@executable_path/../Frameworks')
+        bundler.bundle_app(self.app, [self.external])
+        self.external.rename(self.root / 'unavailable')
+        bundler.check_app(self.app)
+        subprocess.run([str(self.main)], check=True)
+        (self.frameworks / 'libSDL3.dylib').unlink()
+        with self.assertRaisesRegex(RuntimeError, 'missing dependency'):
+            bundler.check_app(self.app)
 
 
 if __name__ == '__main__':
